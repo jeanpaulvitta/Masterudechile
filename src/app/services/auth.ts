@@ -4,53 +4,26 @@ import type { User } from '../contexts/AuthContext';
 const SESSION_KEY = 'natacion_master_session';
 const API_URL = `https://${projectId}.supabase.co/functions/v1/make-server-000a47d9`;
 
-// ==================== CUENTA INICIAL DE ADMINISTRADOR ====================
-// Cuenta de administrador inicial - cambiar la contraseña después del primer login
-const DEMO_USERS = [
-  {
-    id: 'user_admin_1',
-    email: 'admin@uch.cl',
-    password: 'admin123', // Esta es la contraseña por defecto
-    name: 'Administrador UCH',
-    role: 'admin' as const,
-  },
-];
+// ==================== INITIALIZATION ====================
 
-// Base de datos simulada de usuarios registrados (además de los demo)
-const REGISTERED_USERS_KEY = 'natacion_master_users';
-
-function getRegisteredUsers(): typeof DEMO_USERS {
-  const stored = localStorage.getItem(REGISTERED_USERS_KEY);
-  if (!stored) return [];
+// Inicializar admin user en Supabase al cargar
+async function initializeAdminUser() {
   try {
-    return JSON.parse(stored);
-  } catch {
-    return [];
+    await fetch(`${API_URL}/users/init-admin`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${publicAnonKey}`
+      }
+    });
+    console.log('✅ Admin user initialized in Supabase');
+  } catch (error) {
+    console.error('Error initializing admin:', error);
   }
 }
 
-function saveRegisteredUsers(users: typeof DEMO_USERS) {
-  localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(users));
-}
-
-function getAllUsers() {
-  // Para el admin del sistema, usar la contraseña guardada en localStorage si existe
-  const adminUsers = DEMO_USERS.map(user => {
-    if (user.id === 'user_admin_1') {
-      const storedPassword = localStorage.getItem('system_admin_password');
-      return storedPassword ? { ...user, password: storedPassword } : user;
-    }
-    return user;
-  });
-  
-  return [...adminUsers, ...getRegisteredUsers()];
-}
-
-// Función helper para verificar si un email ya existe
-export function checkEmailExists(email: string): boolean {
-  const allUsers = getAllUsers();
-  return allUsers.some(u => u.email === email);
-}
+// Llamar la inicialización
+initializeAdminUser();
 
 // ==================== AUTHENTICATION ====================
 
@@ -64,42 +37,29 @@ export async function login(email: string, password: string): Promise<User> {
     const cleanPassword = password.trim();
     
     console.log('🔐 LOGIN - Intentando autenticar:');
-    console.log('  - Email original:', `"${email}"`);
-    console.log('  - Email limpio:', `"${cleanEmail}"`);
-    console.log('  - Password original:', `"${password}"`);
-    console.log('  - Password limpio:', `"${cleanPassword}"`);
-    console.log('  - Longitud password:', cleanPassword.length);
+    console.log('  - Email:', cleanEmail);
+    console.log('  - Password length:', cleanPassword.length);
     
-    const allUsers = getAllUsers();
-    console.log('📋 Total usuarios disponibles:', allUsers.length);
-    console.log('📧 Usuarios registrados:', allUsers.map(u => ({ email: u.email, role: u.role })));
+    // Buscar usuario en Supabase
+    const response = await fetch(`${API_URL}/users/find-by-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${publicAnonKey}`
+      },
+      body: JSON.stringify({ email: cleanEmail })
+    });
     
-    const user = allUsers.find(u => u.email === cleanEmail && u.password === cleanPassword);
-    
-    if (!user) {
+    if (!response.ok) {
       console.error('❌ No se encontró usuario con estas credenciales');
-      console.log('🔍 Buscando usuario por email...');
-      const userByEmail = allUsers.find(u => u.email === cleanEmail);
-      if (userByEmail) {
-        console.log('  - Usuario encontrado por email:', userByEmail.email);
-        console.log('  - Password esperada:', `"${userByEmail.password}"`);
-        console.log('  - Password recibida:', `"${cleanPassword}"`);
-        console.log('  - Longitud esperada:', userByEmail.password.length);
-        console.log('  - Longitud recibida:', cleanPassword.length);
-        console.log('  - ¿Coinciden exactamente?:', userByEmail.password === cleanPassword);
-        
-        // Comparación carácter por carácter para debugging
-        if (userByEmail.password.length === cleanPassword.length) {
-          for (let i = 0; i < userByEmail.password.length; i++) {
-            if (userByEmail.password[i] !== cleanPassword[i]) {
-              console.log(`  - Diferencia en posición ${i}: esperado="${userByEmail.password[i]}" (${userByEmail.password.charCodeAt(i)}), recibido="${cleanPassword[i]}" (${cleanPassword.charCodeAt(i)})`);
-            }
-          }
-        }
-      } else {
-        console.log('  - No existe usuario con este email');
-        console.log('  - Emails disponibles:', allUsers.map(u => u.email));
-      }
+      throw new Error('Correo electrónico o contraseña incorrectos');
+    }
+    
+    const { user } = await response.json();
+    
+    // Verificar contraseña
+    if (user.password !== cleanPassword) {
+      console.error('❌ Contraseña incorrecta');
       throw new Error('Correo electrónico o contraseña incorrectos');
     }
     
@@ -109,15 +69,15 @@ export async function login(email: string, password: string): Promise<User> {
     if (user.role === 'swimmer') {
       try {
         console.log('🏊‍♂️ Buscando ficha de nadador...');
-        const response = await fetch(`${API_URL}/swimmers`, {
+        const swimmerResponse = await fetch(`${API_URL}/swimmers`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${publicAnonKey}`
           }
         });
         
-        if (response.ok) {
-          const data = await response.json();
+        if (swimmerResponse.ok) {
+          const data = await swimmerResponse.json();
           const swimmers = data.swimmers || [];
           
           // Buscar nadador por email
@@ -127,8 +87,7 @@ export async function login(email: string, password: string): Promise<User> {
             swimmerId = swimmer.id;
             console.log('✅ Ficha de nadador encontrada:', swimmerId);
           } else {
-            console.warn('⚠️ No se encontró ficha de nadador para este email');
-            console.log('📝 Creando ficha de nadador automáticamente...');
+            console.warn('⚠️ No se encontró ficha de nadador, creando automáticamente...');
             
             // Crear ficha de nadador automáticamente
             const today = new Date();
@@ -138,14 +97,14 @@ export async function login(email: string, password: string): Promise<User> {
             const swimmerData = {
               name: user.name,
               email: cleanEmail,
-              rut: '00.000.000-0', // RUT por defecto
+              rut: '00.000.000-0',
               gender: 'Masculino' as const,
               dateOfBirth: defaultDateOfBirth,
               schedule: '7am' as const,
               joinDate: new Date().toISOString().split('T')[0],
-              personalBests: [] as any[],
-              personalBestsHistory: [] as any[],
-              goals: [] as any[],
+              personalBests: [],
+              personalBestsHistory: [],
+              goals: [],
             };
             
             const createResponse = await fetch(`${API_URL}/swimmers`, {
@@ -161,14 +120,11 @@ export async function login(email: string, password: string): Promise<User> {
               const result = await createResponse.json();
               swimmerId = result.swimmer.id;
               console.log('✅ Ficha de nadador creada automáticamente:', swimmerId);
-            } else {
-              console.error('❌ Error al crear ficha automática');
             }
           }
         }
       } catch (error) {
-        console.error('❌ Error al buscar ficha de nadador:', error);
-        // No bloquear el login si falla la búsqueda de ficha
+        console.error('❌ Error al buscar/crear ficha de nadador:', error);
       }
     }
     
@@ -199,55 +155,47 @@ export async function signup(
     // Simular delay de red
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    const allUsers = getAllUsers();
+    const cleanEmail = email.trim();
+    const cleanName = name.trim();
     
-    // Verificar si el email ya existe
-    if (allUsers.find(u => u.email === email)) {
-      throw new Error('Este correo electrónico ya está registrado');
-    }
-    
-    // Generar ID único para el nuevo usuario usando substring en lugar de substr
+    // Generar ID único para el nuevo usuario
     const timestamp = Date.now();
-    const randomStr = Math.random().toString(36).substring(2, 11); // Cambiar substr a substring
+    const randomStr = Math.random().toString(36).substring(2, 11);
     const newUserId = `user_${timestamp}_${randomStr}`;
     
-    // IMPORTANTE: La contraseña inicial es el ID del usuario
+    // La contraseña inicial es el ID del usuario
     const initialPassword = newUserId;
     
-    console.log('🔐 SIGNUP - Generando credenciales:');
-    console.log('  - Email:', email);
+    console.log('🔐 SIGNUP - Creando usuario en Supabase:');
+    console.log('  - Email:', cleanEmail);
     console.log('  - User ID:', newUserId);
-    console.log('  - Password inicial (mismo que ID):', initialPassword);
-    console.log('  - Longitud password:', initialPassword.length);
+    console.log('  - Password length:', initialPassword.length);
     
-    // Crear nuevo usuario con su ID como contraseña inicial
+    // Crear nuevo usuario en Supabase
     const newUser = {
       id: newUserId,
-      email: email.trim(), // Eliminar espacios
+      email: cleanEmail,
       password: initialPassword,
-      name: name.trim(), // Eliminar espacios
+      name: cleanName,
       role,
     };
     
-    // Guardar en localStorage
-    const registeredUsers = getRegisteredUsers();
-    registeredUsers.push(newUser);
-    saveRegisteredUsers(registeredUsers);
+    const response = await fetch(`${API_URL}/users`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${publicAnonKey}`
+      },
+      body: JSON.stringify(newUser)
+    });
     
-    console.log('✅ Usuario guardado en localStorage');
-    console.log('📋 Total usuarios registrados:', registeredUsers.length);
-    
-    // Verificar que se guardó correctamente
-    const savedUsers = getRegisteredUsers();
-    const verifyUser = savedUsers.find(u => u.email === email.trim());
-    if (verifyUser) {
-      console.log('✅ Verificación exitosa - Usuario encontrado después de guardar');
-      console.log('  - Email guardado:', verifyUser.email);
-      console.log('  - Password guardada:', verifyUser.password);
-      console.log('  - ¿Passwords coinciden?:', verifyUser.password === initialPassword);
-    } else {
-      console.error('❌ ERROR: Usuario NO encontrado después de guardar!');
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'No se pudo crear el usuario');
     }
+    
+    const { user: createdUser } = await response.json();
+    console.log('✅ Usuario creado en Supabase:', createdUser.id);
     
     let createdSwimmerId = swimmerId;
     
@@ -256,24 +204,23 @@ export async function signup(
       try {
         console.log('🏊‍♂️ Creando ficha de nadador automáticamente...');
         
-        // Calcular fecha de nacimiento por defecto (25 años atrás desde hoy)
         const today = new Date();
         const defaultBirthYear = today.getFullYear() - 25;
         const defaultDateOfBirth = `${defaultBirthYear}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
         
         const swimmerData = {
-          name: name,
-          email: email,
-          gender: 'Masculino', // Default, el nadador puede actualizar después
-          dateOfBirth: defaultDateOfBirth, // Fecha de nacimiento en lugar de age
-          schedule: '7am', // Default actualizado al nuevo formato
+          name: cleanName,
+          email: cleanEmail,
+          gender: 'Masculino',
+          dateOfBirth: defaultDateOfBirth,
+          schedule: '7am',
           joinDate: new Date().toISOString().split('T')[0],
-          personalBests: [] as any[],
-          personalBestsHistory: [] as any[],
-          goals: [] as any[],
+          personalBests: [],
+          personalBestsHistory: [],
+          goals: [],
         };
         
-        const response = await fetch(`${API_URL}/swimmers`, {
+        const swimmerResponse = await fetch(`${API_URL}/swimmers`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -282,36 +229,26 @@ export async function signup(
           body: JSON.stringify(swimmerData)
         });
         
-        if (!response.ok) {
-          const errorData = await response.json();
-          console.error('❌ Error al crear ficha de nadador:', errorData);
-          throw new Error('No se pudo crear la ficha del nadador');
+        if (swimmerResponse.ok) {
+          const result = await swimmerResponse.json();
+          createdSwimmerId = result.swimmer.id;
+          console.log('✅ Ficha de nadador creada exitosamente:', createdSwimmerId);
         }
-        
-        const result = await response.json();
-        createdSwimmerId = result.swimmer.id;
-        console.log('✅ Ficha de nadador creada exitosamente:', result.swimmer);
-        
       } catch (swimmerError) {
         console.error('❌ Error al crear ficha de nadador:', swimmerError);
-        // No lanzamos el error para no bloquear el registro
-        // El usuario se registrará pero sin ficha (puede crearse manualmente después)
-        console.warn('⚠️ Usuario registrado pero sin ficha de nadador. Crear manualmente.');
       }
     }
     
     const userData: User & { initialPassword: string } = {
-      id: newUser.id,
-      email: newUser.email,
-      name: newUser.name,
-      role: newUser.role,
+      id: createdUser.id,
+      email: createdUser.email,
+      name: createdUser.name,
+      role: createdUser.role,
       swimmerId: createdSwimmerId,
-      initialPassword, // Retornamos la contraseña inicial para mostrársela al usuario
+      initialPassword,
     };
     
-    console.log('✅ Signup successful - retornando credenciales:');
-    console.log('  - Email a retornar:', userData.email);
-    console.log('  - Password a retornar:', initialPassword);
+    console.log('✅ Signup successful');
     return userData;
   } catch (error) {
     console.error('❌ Signup error:', error);
@@ -325,6 +262,24 @@ export async function logout(): Promise<void> {
   } catch (error) {
     console.error('❌ Logout error:', error);
     throw error;
+  }
+}
+
+// Función helper para verificar si un email ya existe
+export async function checkEmailExists(email: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${API_URL}/users/find-by-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${publicAnonKey}`
+      },
+      body: JSON.stringify({ email })
+    });
+    
+    return response.ok;
+  } catch (error) {
+    return false;
   }
 }
 
@@ -351,35 +306,36 @@ export function clearSession(): void {
 
 // ==================== DEBUGGING UTILITIES ====================
 
-// Función de utilidad para debugging - listar todos los usuarios registrados
-export function debugListAllUsers() {
-  console.log('🔍 DEBUG - Listando todos los usuarios:');
-  const registered = getRegisteredUsers();
-  const demo = DEMO_USERS;
+export async function debugListAllUsers() {
+  console.log('🔍 DEBUG - Listando todos los usuarios desde Supabase:');
   
-  console.log('\n📧 USUARIOS DEMO:');
-  demo.forEach(u => {
-    console.log(`  - Email: "${u.email}" | Password: "${u.password}" | Role: ${u.role}`);
-  });
-  
-  console.log('\n📧 USUARIOS REGISTRADOS:');
-  if (registered.length === 0) {
-    console.log('  - (ninguno)');
-  } else {
-    registered.forEach(u => {
-      console.log(`  - Email: "${u.email}" | Password: "${u.password}" | Role: ${u.role}`);
+  try {
+    const response = await fetch(`${API_URL}/users`, {
+      headers: {
+        'Authorization': `Bearer ${publicAnonKey}`
+      }
     });
+    
+    if (response.ok) {
+      const { users } = await response.json();
+      console.log(`📊 TOTAL: ${users.length} usuarios`);
+      users.forEach((u: any) => {
+        console.log(`  - Email: "${u.email}" | Role: ${u.role}`);
+      });
+      return { users };
+    }
+  } catch (error) {
+    console.error('Error fetching users:', error);
   }
   
-  console.log(`\n📊 TOTAL: ${demo.length + registered.length} usuarios`);
-  return { demo, registered };
+  return { users: [] };
 }
 
-// Función para limpiar usuarios registrados (útil para testing)
-export function debugClearRegisteredUsers() {
-  console.warn('🗑️ Limpiando usuarios registrados desde localStorage...');
-  console.log('ℹ️ La cuenta de administrador inicial (admin@uch.cl) NO se elimina porque es parte del sistema');
-  localStorage.removeItem(REGISTERED_USERS_KEY);
-  console.log('✅ Usuarios registrados eliminados correctamente');
-  console.log('💡 La cuenta de administrador inicial seguirá disponible para iniciar sesión');
+export async function debugClearRegisteredUsers() {
+  console.warn('🗑️ Esta función ya no limpia localStorage porque los usuarios están en Supabase');
+  console.log('ℹ️ Para limpiar usuarios de Supabase, usa el panel de administración');
+  console.log('💡 Los datos ahora persisten en el servidor, no en el navegador local');
+  
+  // Ya no hacemos nada porque los usuarios están en Supabase, no en localStorage
+  return;
 }

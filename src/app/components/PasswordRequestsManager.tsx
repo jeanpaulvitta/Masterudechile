@@ -11,59 +11,12 @@ import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
 import { checkEmailExists } from '../services/auth';
 import * as api from '../services/api';
+import { copyToClipboard } from '../utils/clipboard';
 
 // Usar el tipo de la API
 type PasswordRequest = api.PasswordRequest;
 
 const REQUESTS_KEY = 'natacion_master_password_requests';
-
-// Helper function para copiar texto al portapapeles con fallback
-function copyToClipboard(text: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    // Método 1: Intentar usar la API del portapapeles moderna
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text)
-        .then(() => resolve())
-        .catch(() => {
-          // Si falla, usar el método de fallback
-          fallbackCopyTextToClipboard(text, resolve, reject);
-        });
-    } else {
-      // Si no está disponible, usar directamente el fallback
-      fallbackCopyTextToClipboard(text, resolve, reject);
-    }
-  });
-}
-
-// Método de fallback usando execCommand
-function fallbackCopyTextToClipboard(text: string, resolve: () => void, reject: (error: Error) => void) {
-  const textArea = document.createElement('textarea');
-  textArea.value = text;
-  
-  // Evitar scroll
-  textArea.style.top = '0';
-  textArea.style.left = '0';
-  textArea.style.position = 'fixed';
-  textArea.style.opacity = '0';
-  
-  document.body.appendChild(textArea);
-  textArea.focus();
-  textArea.select();
-  
-  try {
-    const successful = document.execCommand('copy');
-    document.body.removeChild(textArea);
-    
-    if (successful) {
-      resolve();
-    } else {
-      reject(new Error('No se pudo copiar al portapapeles'));
-    }
-  } catch (err) {
-    document.body.removeChild(textArea);
-    reject(err instanceof Error ? err : new Error('Error al copiar'));
-  }
-}
 
 function getPasswordRequests(): PasswordRequest[] {
   const stored = localStorage.getItem(REQUESTS_KEY);
@@ -140,6 +93,30 @@ export function PasswordRequestsManager() {
       console.log('  - Email:', credentials.email);
       console.log('  - Password:', credentials.password);
       console.log('  - Longitud password:', credentials.password.length);
+      
+      // IMPORTANTE: Guardar también en localStorage directamente
+      const REGISTERED_USERS_KEY = 'natacion_master_users';
+      const registeredUsers = JSON.parse(localStorage.getItem(REGISTERED_USERS_KEY) || '[]');
+      
+      // Crear el objeto de usuario con el formato correcto
+      const timestamp = Date.now();
+      const randomStr = Math.random().toString(36).substring(2, 11);
+      const userId = `user_${timestamp}_${randomStr}`;
+      
+      const newUser = {
+        id: userId,
+        email: credentials.email,
+        name: request.name,
+        password: credentials.password,
+        role: request.role
+      };
+      
+      // Agregar a la lista y guardar
+      registeredUsers.push(newUser);
+      localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(registeredUsers));
+      
+      console.log('✅ Usuario guardado en localStorage:', newUser);
+      console.log('📋 Total usuarios en localStorage:', registeredUsers.length);
       
       // Actualizar el estado de la solicitud en Supabase
       await api.updatePasswordRequest(request.id, {

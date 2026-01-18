@@ -32,6 +32,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import type { Swimmer } from "../data/swimmers";
 import { PasswordRequestsManager } from "./PasswordRequestsManager";
 import { DebugPanel } from "./DebugPanel";
+import { copyToClipboard } from "../utils/clipboard";
 
 interface UserData {
   id: string;
@@ -735,7 +736,7 @@ export function UserManager({ swimmers }: UserManagerProps) {
                     <button
                       type="button"
                       onClick={() => {
-                        navigator.clipboard.writeText(createdUserPassword || "");
+                        copyToClipboard(createdUserPassword || "");
                         setPasswordCopied(true);
                         setTimeout(() => setPasswordCopied(false), 2000);
                       }}
@@ -787,7 +788,7 @@ export function UserManager({ swimmers }: UserManagerProps) {
                   type="button"
                   variant="outline"
                   onClick={() => {
-                    navigator.clipboard.writeText(
+                    copyToClipboard(
                       `Credenciales de acceso:\n\nEmail: ${createdUserData?.email}\nContraseña: ${createdUserPassword}\n\nInicia sesión en el sistema de Natación Master UCH`
                     );
                     setPasswordCopied(true);

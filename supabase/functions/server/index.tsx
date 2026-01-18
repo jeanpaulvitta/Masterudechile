@@ -1135,4 +1135,167 @@ app.delete("/make-server-000a47d9/password-requests/:id", async (c) => {
   }
 });
 
+// ==================== USERS ROUTES ====================
+
+// Get all users (excluding passwords for security)
+app.get("/make-server-000a47d9/users", async (c) => {
+  try {
+    const users = await kv.get("users:list") || [];
+    // No devolver contraseñas en el listado
+    const safeUsers = users.map((u: any) => ({
+      id: u.id,
+      email: u.email,
+      name: u.name,
+      role: u.role,
+      swimmerId: u.swimmerId
+    }));
+    return c.json({ users: safeUsers });
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    return c.json({ error: "Failed to fetch users", details: String(error) }, 500);
+  }
+});
+
+// Get a single user by ID (including password for auth)
+app.get("/make-server-000a47d9/users/:id", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const users = await kv.get("users:list") || [];
+    
+    const user = users.find((u: any) => u.id === id);
+    
+    if (!user) {
+      return c.json({ error: "User not found" }, 404);
+    }
+    
+    return c.json({ user });
+  } catch (error) {
+    console.error("Error fetching user:", error);
+    return c.json({ error: "Failed to fetch user", details: String(error) }, 500);
+  }
+});
+
+// Find user by email (for login)
+app.post("/make-server-000a47d9/users/find-by-email", async (c) => {
+  try {
+    const { email } = await c.req.json();
+    const users = await kv.get("users:list") || [];
+    
+    const user = users.find((u: any) => u.email === email);
+    
+    if (!user) {
+      return c.json({ error: "User not found" }, 404);
+    }
+    
+    return c.json({ user });
+  } catch (error) {
+    console.error("Error finding user by email:", error);
+    return c.json({ error: "Failed to find user", details: String(error) }, 500);
+  }
+});
+
+// Add a new user
+app.post("/make-server-000a47d9/users", async (c) => {
+  try {
+    const newUser = await c.req.json();
+    const users = await kv.get("users:list") || [];
+    
+    // Verificar si el email ya existe
+    if (users.some((u: any) => u.email === newUser.email)) {
+      return c.json({ error: "Email already exists" }, 400);
+    }
+    
+    // Generate unique ID if not provided
+    const id = newUser.id || `user_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+    const userWithId = { ...newUser, id };
+    
+    // Add to list
+    const updatedUsers = [...users, userWithId];
+    await kv.set("users:list", updatedUsers);
+    
+    console.log("✅ User created:", { id, email: userWithId.email, role: userWithId.role });
+    return c.json({ user: userWithId }, 201);
+  } catch (error) {
+    console.error("Error adding user:", error);
+    return c.json({ error: "Failed to add user", details: String(error) }, 500);
+  }
+});
+
+// Update a user
+app.put("/make-server-000a47d9/users/:id", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const updatedData = await c.req.json();
+    const users = await kv.get("users:list") || [];
+    
+    const index = users.findIndex((u: any) => u.id === id);
+    if (index === -1) {
+      return c.json({ error: "User not found" }, 404);
+    }
+    
+    users[index] = { ...users[index], ...updatedData };
+    await kv.set("users:list", users);
+    
+    console.log("✅ User updated:", { id, email: users[index].email });
+    return c.json({ user: users[index] });
+  } catch (error) {
+    console.error("Error updating user:", error);
+    return c.json({ error: "Failed to update user", details: String(error) }, 500);
+  }
+});
+
+// Delete a user
+app.delete("/make-server-000a47d9/users/:id", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const users = await kv.get("users:list") || [];
+    
+    const filteredUsers = users.filter((u: any) => u.id !== id);
+    
+    if (filteredUsers.length === users.length) {
+      return c.json({ error: "User not found" }, 404);
+    }
+    
+    await kv.set("users:list", filteredUsers);
+    
+    console.log("✅ User deleted:", id);
+    return c.json({ message: "User deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    return c.json({ error: "Failed to delete user", details: String(error) }, 500);
+  }
+});
+
+// Initialize admin user (called on first server start)
+app.post("/make-server-000a47d9/users/init-admin", async (c) => {
+  try {
+    const users = await kv.get("users:list") || [];
+    
+    // Check if admin already exists
+    const adminExists = users.some((u: any) => u.email === "admin@uch.cl");
+    
+    if (adminExists) {
+      return c.json({ message: "Admin already exists" });
+    }
+    
+    // Create default admin
+    const adminUser = {
+      id: "user_admin_1",
+      email: "admin@uch.cl",
+      password: "admin123",
+      name: "Administrador UCH",
+      role: "admin"
+    };
+    
+    const updatedUsers = [...users, adminUser];
+    await kv.set("users:list", updatedUsers);
+    
+    console.log("✅ Admin user initialized");
+    return c.json({ message: "Admin user created", user: { email: adminUser.email, role: adminUser.role } });
+  } catch (error) {
+    console.error("Error initializing admin:", error);
+    return c.json({ error: "Failed to initialize admin", details: String(error) }, 500);
+  }
+});
+
 Deno.serve(app.fetch);

@@ -1,0 +1,19 @@
+id,nombre,email,fecha_nacimiento,horario,fecha_ingreso
+s1,Carlos Muñoz,carlos.munoz@uchile.cl,1989-06-15,7am,2025-01-15
+s2,Patricia González,patricia.gonzalez@uchile.cl,1982-11-22,7am,2025-01-20
+s3,Roberto Silva,roberto.silva@uchile.cl,1986-03-10,7am,2025-02-01
+s4,María José Pérez,mariajose.perez@uchile.cl,1991-08-05,7am,2025-01-10
+s5,Andrés Rojas,andres.rojas@uchile.cl,1979-12-18,7am,2025-02-05
+s6,Fernanda López,fernanda.lopez@uchile.cl,1995-04-25,8am,2025-01-18
+s7,Diego Martínez,diego.martinez@uchile.cl,1988-09-30,8am,2025-01-25
+s8,Carolina Ramírez,carolina.ramirez@uchile.cl,1993-07-12,8am,2025-02-10
+s9,Luis Fernández,luis.fernandez@uchile.cl,1984-01-20,8am,2025-01-12
+s10,Valentina Castro,valentina.castro@uchile.cl,1997-10-08,8am,2025-02-03
+s11,Jorge Vargas,jorge.vargas@uchile.cl,1990-05-14,8am,2025-01-22
+s12,Camila Torres,camila.torres@uchile.cl,1996-02-28,9pm,2025-01-16
+s13,Sebastián Morales,sebastian.morales@uchile.cl,1992-11-03,9pm,2025-02-08
+s14,Daniela Flores,daniela.flores@uchile.cl,1987-06-19,9pm,2025-01-14
+s15,Rodrigo Soto,rodrigo.soto@uchile.cl,1983-09-25,9pm,2025-02-12
+s16,Javiera Núñez,javiera.nunez@uchile.cl,1998-12-07,9pm,2025-01-28
+s17,Francisco Herrera,francisco.herrera@uchile.cl,1985-04-16,9pm,2025-02-02
+s18,Isidora Contreras,isidora.contreras@uchile.cl,1994-08-11,9pm,2025-01-19

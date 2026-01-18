@@ -1,0 +1,210 @@
+semana,fecha,dia,mesociclo,distancia_total,tipo,descripcion_corta,calentamiento,serie_principal,enfriamiento,objetivo_tecnico
+1,2025-03-02,Lunes,Base,1500,Regular,Inicio de temporada - Técnica y resistencia,"300m: 200 Crol suave + 100 Estilos variado","10 x 100m @ 1:50 Crol (RPE 6-7)
+Descanso: 20 segundos entre repeticiones","200m: Estilos suaves con énfasis en técnica","Desarrollar base aeróbica, establecer ritmo de entrenamiento"
+1,2025-03-04,Miércoles,Base,1500,Regular,Construcción aeróbica,"400m: 200 Crol + 100 Pecho + 100 Espalda","4 x 200m @ 3:40 Crol (RPE 6)
+4 x 100m @ 1:50 Estilos (RPE 6)","200m: Técnica de respiración","Mejorar eficiencia en crol, introducir variedad"
+1,2025-03-06,Viernes,Base,1500,Regular,Resistencia continua,"300m: Técnica variada con pull buoy","800m Crol continuo @ RPE 6
+4 x 100m @ 1:45 Pecho/Espalda alternado","200m: Suave recuperación","Construir resistencia aeróbica sostenida"
+1,2025-03-08,Sábado,1600,Desafío,Resistencia Progresiva,"300m variado técnica","Serie continua:
+200m @ RPE 6
++ 200m @ RPE 7
++ 400m @ RPE 7
++ 400m @ RPE 8
+Descanso: 30 seg entre series","200m suave estilos","Progresión de intensidad, desarrollo mental"
+2,2025-03-09,Lunes,Base,1600,Regular,Técnica y velocidad,"400m: Ejercicios técnicos de crol","8 x 100m @ 1:45 Crol con técnica perfecta
+4 x 50m @ 1:00 Sprint (RPE 8)","200m: Recuperación activa","Refinamiento técnico, introducción de velocidad"
+2,2025-03-11,Miércoles,Base,1600,Regular,Trabajo de estilos,"300m: Crol técnico","400m Combinado individual
+8 x 100m @ 1:50 (2x cada estilo)
+200m Crol descenso","200m: Técnica suave","Desarrollo equilibrado de todos los estilos"
+2,2025-03-13,Viernes,Base,1600,Regular,Resistencia con variaciones,"400m: 200 técnica + 200 progresivo","12 x 100m @ 1:45 (3 Crol + 1 Estilo)
+Mantener ritmo constante","200m: Recuperación activa","Mantener calidad técnica bajo fatiga"
+2,2025-03-15,Sábado,1700,Desafío,Escalera de Velocidad,"300m técnica variada","Serie escalera:
+50m @ RPE 8
++ 100m @ RPE 8
++ 150m @ RPE 8
++ 200m @ RPE 8
++ 150m @ RPE 8
++ 100m @ RPE 8
++ 50m @ RPE 9
+Descanso: 45 seg entre series","200m suave técnica","Control de ritmo, velocidad progresiva"
+3,2025-03-16,Lunes,Base,1700,Regular,Intervalos aeróbicos,"400m: Variado técnico con aletas","10 x 150m @ 2:30 Crol (RPE 7)
+Enfoque en brazada larga","200m: Técnica de piernas","Aumentar capacidad aeróbica, eficiencia"
+3,2025-03-18,Miércoles,Base,1700,Regular,Trabajo de resistencia,"400m: Progresivo por 100m","2 x 600m @ 10:00 Crol (RPE 6-7)
+Mantener técnica constante","300m: Estilos variados suaves","Construcción de resistencia de media distancia"
+3,2025-03-20,Viernes,Base,1700,Regular,Velocidad controlada,"400m: Ejercicios técnicos variados","16 x 75m @ 1:20 (RPE 7-8)
+25m rápido + 50m moderado","200m: Recuperación técnica","Desarrollo de cambios de ritmo"
+3,2025-03-22,Sábado,1800,Desafío,Prueba Contrarreloj 400m,"400m técnica variada","2 x 400m Contrarreloj (máximo esfuerzo)
+Descanso: 5 minutos entre intentos
+4 x 100m técnica recuperación","200m muy suave","Evaluación de progreso, simulación competencia"
+4,2025-03-23,Lunes,Desarrollo,1800,Regular,Transición a desarrollo - Intensidad,"400m: Técnica progresiva","5 x 200m @ 3:20 Crol (RPE 7)
+5 x 100m @ 1:40 Sprint (RPE 8)","200m: Recuperación activa","Introducir mayor intensidad de trabajo"
+4,2025-03-25,Miércoles,Desarrollo,1800,Regular,Series de calidad,"500m: Variado técnico con pull buoy","8 x 150m @ 2:20 Crol (RPE 7-8)
+Enfoque en potencia de brazada","200m: Técnica suave","Mejorar potencia y velocidad sostenida"
+4,2025-03-27,Viernes,Desarrollo,1800,Regular,Trabajo mixto,"400m: Ejercicios técnicos","400m Crol @ RPE 7
+8 x 100m @ 1:35 alternado (Crol/Otro)
+200m descenso","200m: Recuperación","Mantener velocidad en diferentes estilos"
+4,2025-03-29,Sábado,1900,Desafío,Serie Piramidal Invertida,"400m variado técnica","Serie piramidal:
+400m @ RPE 7 (desc 60s)
++ 300m @ RPE 7 (desc 45s)
++ 200m @ RPE 8 (desc 30s)
++ 100m @ RPE 9 (desc 20s)
++ 100m @ RPE 9 (desc 20s)
++ 200m @ RPE 8","200m técnica suave","Gestión de energía, control de ritmo descendente"
+5,2025-03-30,Lunes,Desarrollo,1900,Regular,Intensidad aeróbica alta,"500m: Técnica variada con aletas","12 x 100m @ 1:35 Crol (RPE 7-8)
+Mantener velocidad constante","300m: Recuperación estilos","Elevar umbral aeróbico"
+5,2025-04-01,Miércoles,Desarrollo,1900,Regular,Trabajo de umbral,"400m: Progresivo técnico","3 x 400m @ 6:30 Crol (RPE 7)
+Descanso: 45 segundos","300m: Técnica de respiración","Trabajar en zona de umbral anaeróbico"
+5,2025-04-03,Viernes,Desarrollo,1900,Regular,Series de potencia,"500m: Ejercicios técnicos con palas","10 x 100m @ 1:30 Crol con palas (RPE 8)
+Enfoque en fase de empuje","200m: Recuperación sin equipo","Desarrollar fuerza específica de natación"
+5,2025-04-05,Sábado,2000,Desafío,Desafío 2000m Continuo,"400m técnica progresiva","2000m Crol continuo
+Objetivo: mantener ritmo constante @ RPE 7
+Sin paradas (tocar pared y seguir)","200m muy suave estilos","Resistencia mental, gestión de ritmo largo"
+6,2025-04-06,Lunes,Desarrollo,2000,Regular,Velocidad con recuperación,"500m: Variado técnico","15 x 100m @ 1:35 (RPE 8)
+50m rápido + 50m recuperación","300m: Técnica de piernas","Desarrollar recuperación activa"
+6,2025-04-08,Miércoles,Desarrollo,2000,Regular,Trabajo de estilos intenso,"500m: Técnica de 4 estilos","4 x (200m Combinado + 100m Sprint estilo)
+Total: 1200m + 300m suave","300m: Recuperación variada","Mejorar todos los estilos bajo fatiga"
+6,2025-04-10,Viernes,Desarrollo,2000,Regular,Intervalos largos,"500m: Progresivo por 100m","4 x 300m @ 5:00 Crol (RPE 7)
+3 x 100m @ 1:30 Sprint (RPE 9)","300m: Recuperación técnica","Resistencia de velocidad"
+6,2025-04-12,Sábado,2100,Desafío,Relevos Simulados,"500m técnica variada","Serie de relevos:
+8 x 50m @ 1:00 (RPE 9) - Sprint
+4 x 100m @ 1:45 (RPE 8) - Transición
+2 x 200m @ 3:30 (RPE 7) - Resistencia","300m suave recuperación","Simulación de competencia, velocidad máxima"
+7,2025-04-13,Lunes,Desarrollo,2100,Regular,Pre-competencia - Afilado,"500m: Técnica perfecta suave","10 x 100m @ 1:40 Crol (RPE 7)
+Enfoque en velocidad de brazada","200m: Técnica de virajes","Preparación mental para competencia"
+7,2025-04-15,Miércoles,Desarrollo,2100,Regular,Día de competencia - Copa Universidad,"Calentamiento pre-competencia variable según pruebas","COMPETENCIA: Copa Universidad de Chile
+Participación en pruebas asignadas","Enfriamiento post-competencia según necesidad","Aplicar entrenamiento en competencia real"
+7,2025-04-17,Viernes,Desarrollo,2100,Regular,Recuperación post-competencia,"600m: Muy suave, técnica relajada","800m: Nado continuo suave (RPE 5)
+4 x 100m técnica con pull buoy","300m: Estilos muy suaves","Recuperación activa, análisis técnico"
+7,2025-04-19,Sábado,2100,Desafío,Series de Recuperación Activa,"400m técnica variada","Series largas suaves:
+600m @ RPE 6
++ 400m @ RPE 6
++ 400m @ RPE 6
++ 300m @ RPE 6
+Descanso mínimo (20 seg)","200m técnica","Mantener volumen con baja intensidad"
+8,2025-04-20,Lunes,Intensificación,2200,Regular,Retomar intensidad,"500m: Progresivo técnico","12 x 150m @ 2:20 Crol (RPE 7-8)
+Enfoque en frecuencia de brazada","300m: Recuperación estilos","Volver a cargas normales post-competencia"
+8,2025-04-22,Miércoles,Intensificación,2200,Regular,Series de calidad técnica,"600m: Ejercicios técnicos variados","5 x 200m @ 3:20 Crol técnica perfecta (RPE 7)
+8 x 50m @ 50 Sprint (RPE 9)","300m: Técnica de respiración","Combinar calidad técnica con velocidad"
+8,2025-04-24,Viernes,Intensificación,2200,Regular,Trabajo de potencia,"600m: Técnica con palas y pull buoy","8 x 200m @ 3:15 Crol con palas (RPE 8)
+Descanso: 30 segundos","300m: Recuperación sin equipo","Desarrollar potencia de brazada"
+8,2025-04-26,Sábado,2200,Desafío,Desafío Broken 1000m,"500m técnica progresiva","Broken 1000m:
+10 x 100m @ 1:30 (RPE 8-9)
+Objetivo: sumar tiempo menor a tu 1000m continuo
+Descanso fijo: 10 segundos entre series","300m muy suave","Simulación ritmo de carrera, gestión mental"
+9,2025-04-27,Lunes,Intensificación,2200,Regular,Intervalos de alta intensidad,"500m: Técnica variada","20 x 75m @ 1:15 (RPE 8)
+25m Sprint + 50m Moderado","300m: Recuperación activa","Trabajar cambios de ritmo rápidos"
+9,2025-04-29,Miércoles,Intensificación,2200,Regular,Resistencia aeróbica máxima,"600m: Progresivo por 150m","3 x 500m @ 8:00 Crol (RPE 7)
+Mantener técnica bajo fatiga","300m: Técnica de piernas suave","Elevar capacidad aeróbica máxima"
+9,2025-05-01,Viernes,Intensificación,2300,Regular,Serie mixta potencia-velocidad,"600m: Ejercicios con palas y aletas","10 x 100m @ 1:35 Crol con palas (RPE 8)
+10 x 50m @ 55 Sprint sin equipo (RPE 9)","300m: Recuperación técnica","Contraste potencia-velocidad"
+9,2025-05-03,Sábado,2300,Desafío,Simulacro de Competencia Multiple,"500m calentamiento completo","Simulacro de múltiples pruebas:
+200m Crol @ RPE 9 (desc 10 min)
+100m Estilo elegido @ RPE 9 (desc 15 min)
+50m Sprint máximo @ RPE 10","300m enfriamiento activo","Simular formato de competencia con múltiples pruebas"
+10,2025-05-04,Lunes,Intensificación,2300,Regular,Pre-competencia - Ajuste fino,"600m: Técnica perfecta variada","8 x 100m @ 1:40 Crol (RPE 7)
+4 x 50m @ 50 Sprint (RPE 9)
+Enfoque en salidas y virajes","300m: Técnica de virajes","Afinar detalles técnicos pre-competencia"
+10,2025-05-06,Miércoles,Intensificación,2300,Regular,Recuperación táctica,"600m: Muy suave, técnica relajada","1000m: Nado continuo suave (RPE 5-6)
+6 x 100m técnica con pull buoy","300m: Recuperación activa","Descanso activo antes de competencia"
+10,2025-05-08,Viernes,Intensificación,2300,Regular,Activación pre-competencia,"400m: Técnica suave activación","6 x 50m @ 1:00 Progresivo (RPE 6-8)
+4 x 25m Sprint (RPE 9)","200m: Muy suave","Activación neuromuscular, mantener sensación"
+10,2025-05-10,Sábado,2300,Desafío,Competencia Regional Metropolitana,"Calentamiento específico según pruebas","COMPETENCIA: Regional Metropolitana Master
+Participación en pruebas clasificadas","Enfriamiento según necesidad","Clasificación para Nacional, aplicar estrategias"
+11,2025-05-11,Lunes,Intensificación,2400,Regular,Recuperación post-competencia activa,"600m: Técnica muy suave","1200m: Nado continuo relajado (RPE 5)
+400m: Técnica variada con pull buoy","300m: Estilos suaves","Recuperación física y mental"
+11,2025-05-13,Miércoles,Intensificación,2400,Regular,Retomar volumen,"600m: Progresivo técnico","14 x 100m @ 1:35 Crol (RPE 7)
+6 x 100m @ 1:40 Estilos (RPE 6)","300m: Recuperación estilos","Volver a cargas de entrenamiento normales"
+11,2025-05-15,Viernes,Intensificación,2400,Regular,Trabajo de umbral sostenido,"600m: Técnica con pull buoy","4 x 400m @ 6:20 Crol (RPE 7-8)
+Descanso: 45 segundos","400m: Recuperación activa","Mantener ritmo de umbral anaeróbico"
+11,2025-05-17,Sábado,2400,Desafío,Serie de Velocidad Máxima,"600m técnica completa","Serie de velocidad:
+16 x 50m @ 1:00 (RPE 9)
+Salir de bloque, máxima velocidad
+Rotación estilos cada 4 repeticiones","300m técnica recuperación","Desarrollar velocidad máxima, potencia anaeróbica"
+12,2025-05-18,Lunes,Pico,2400,Regular,Trabajo de velocidad resistida,"600m: Ejercicios con palas","12 x 100m @ 1:30 Crol con palas (RPE 8)
+8 x 50m @ 50 Sprint libre (RPE 9)","300m: Recuperación sin equipo","Potencia + Velocidad"
+12,2025-05-20,Miércoles,Pico,2400,Regular,Series largas de calidad,"600m: Técnica progresiva","5 x 300m @ 4:45 Crol (RPE 7-8)
+Mantener técnica perfecta","400m: Recuperación estilos","Resistencia de velocidad"
+12,2025-05-22,Viernes,Pico,2400,Regular,Intervalos cortos intensos,"600m: Técnica variada con aletas","24 x 50m @ 50 (RPE 8-9)
+Rotación: 2 Crol + 1 Estilo + 1 Crol","300m: Técnica suave","Capacidad anaeróbica, tolerancia al lactato"
+12,2025-05-24,Sábado,2500,Desafío,Desafío Máximo Volumen,"600m técnica activación","Serie de máximo volumen:
+1000m @ RPE 7 (desc 60s)
++ 600m @ RPE 7 (desc 45s)
++ 400m @ RPE 8 (desc 30s)
++ 200m @ RPE 8 (desc 20s)
++ 4 x 50m @ RPE 9","300m recuperación","Alcanzar volumen objetivo de temporada"
+13,2025-05-25,Lunes,Pico,2500,Regular,Pico de forma - Calidad máxima,"600m: Técnica perfecta","15 x 100m @ 1:30 Crol (RPE 8)
+Enfoque en velocidad de brazada alta","400m: Técnica de competencia","Alcanzar máxima forma física"
+13,2025-05-27,Miércoles,Pico,2500,Regular,Potencia específica,"600m: Ejercicios con palas y pull buoy","10 x 150m @ 2:15 Crol con palas (RPE 8)
+10 x 50m @ 45 Sprint (RPE 9)","400m: Recuperación activa","Potencia + Velocidad específica de competencia"
+13,2025-05-29,Viernes,Pico,2500,Regular,Resistencia de alta intensidad,"600m: Progresivo por 100m","3 x 600m @ 9:30 Crol (RPE 7-8)
+Descanso: 60 segundos","400m: Recuperación técnica","Mantener velocidad en distancias largas"
+13,2025-05-31,Sábado,2500,Desafío,Test de Rendimiento Final,"600m activación completa","Batería de tests:
+400m Crol @ máximo (desc 15 min)
+200m Crol @ máximo (desc 10 min)
+100m Estilo @ máximo (desc 8 min)
+8 x 50m @ 1:00 Sprint","400m enfriamiento","Evaluación final de rendimiento pre-pulimiento"
+14,2025-06-01,Lunes,Pico,2500,Regular,Mantenimiento de forma,"600m: Técnica variada suave","12 x 150m @ 2:20 Crol (RPE 7)
+Mantener sensación de agua","400m: Recuperación estilos","Mantener forma sin sobreentrenar"
+14,2025-06-03,Miércoles,Pico,2500,Regular,Trabajo técnico de calidad,"700m: Ejercicios técnicos específicos","16 x 100m @ 1:35 (RPE 7-8)
+Enfoque en detalles técnicos perfectos","400m: Técnica de virajes y salidas","Perfeccionamiento técnico"
+14,2025-06-05,Viernes,Pico,2500,Regular,Series de velocidad controlada,"600m: Técnica con aletas","20 x 75m @ 1:10 (RPE 8)
+25m Sprint + 50m Moderado","400m: Recuperación activa","Control de ritmo y cambios de velocidad"
+14,2025-06-07,Sábado,2500,Desafío,Competencia Simulada Open Primavera,"Calentamiento pre-competencia","COMPETENCIA: Open de Primavera
+Pruebas: según inscripción individual
+Formato: Simulación de Nacional","Enfriamiento post-pruebas","Práctica de estrategia de carrera"
+15,2025-06-08,Lunes,Pulimiento,2400,Regular,Inicio de pulimiento - Reducción volumen,"500m: Técnica suave perfecta","10 x 100m @ 1:35 Crol (RPE 7)
+Enfoque en velocidad, no resistencia","300m: Recuperación técnica","Reducir volumen, mantener intensidad"
+15,2025-06-10,Miércoles,Pulimiento,2400,Regular,Recuperación activa profunda,"500m: Muy suave, técnica relajada","1200m: Continuo suave (RPE 5-6)
+8 x 50m técnica con pull buoy","300m: Estilos recuperación","Permitir recuperación muscular completa"
+15,2025-06-12,Viernes,Pulimiento,2400,Regular,Trabajo de velocidad pura,"500m: Activación técnica","8 x 50m @ 1:00 Sprint (RPE 9)
+Máxima velocidad, recuperación completa","200m: Muy suave","Mantener velocidad máxima, reducir fatiga"
+15,2025-06-14,Sábado,2300,Desafío,Serie de Mantenimiento Ligero,"400m técnica variada","Serie suave:
+400m @ RPE 6
++ 300m @ RPE 6
++ 200m @ RPE 7
++ 4 x 50m @ RPE 8
+Recuperación amplia entre series","300m muy suave","Mantener actividad sin fatiga acumulada"
+16,2025-06-15,Lunes,Pulimiento,2300,Regular,Pulimiento técnico,"500m: Ejercicios técnicos perfectos","6 x 100m @ 1:40 Crol técnica perfecta (RPE 7)
+6 x 50m @ 55 Sprint (RPE 8-9)","300m: Técnica suave","Perfeccionar técnica, mantener sensación"
+16,2025-06-17,Miércoles,Pulimiento,2300,Regular,Activación neuromuscular,"400m: Técnica variada suave","10 x 50m @ 1:00 Progresivo (RPE 6-8)
+Enfoque en aceleración","200m: Recuperación activa","Activar sistema nervioso sin fatiga"
+16,2025-06-19,Viernes,Pulimiento,2200,Regular,Pre-ajuste fino,"400m: Técnica perfecta relajada","8 x 75m @ 1:20 (RPE 7)
+4 x 25m Sprint máximo (RPE 10)","200m: Muy suave","Últimos ajustes técnicos"
+16,2025-06-21,Sábado,2200,Desafío,Nado Técnico Libre,"400m técnica variada","Sesión libre de exploración:
+Practicar salidas, virajes
+Probar distancias de competencia a ritmo suave
+Enfoque: confianza y relajación","300m técnica suave","Preparación mental, visualización"
+17,2025-06-22,Lunes,Pulimiento,2100,Regular,Mantenimiento mínimo,"400m: Técnica suave activación","6 x 100m @ 1:45 Crol (RPE 6-7)
+Sentir el agua, no forzar","200m: Recuperación","Mantener contacto con agua, mínima carga"
+17,2025-06-24,Miércoles,Pulimiento,2100,Regular,Activación ligera,"400m: Técnica variada","8 x 50m @ 1:05 Moderado (RPE 6-7)
+Enfoque en sensación de deslizamiento","200m: Muy suave","Mantener activación sin fatiga"
+17,2025-06-26,Viernes,Pulimiento,2000,Regular,Sesión de confianza,"400m: Técnica perfecta","6 x 50m @ 1:00 Progresivo (RPE 6-9)
+Sentir potencia sin forzar","200m: Recuperación relajada","Construir confianza pre-Nacional"
+17,2025-06-28,Sábado,2000,Desafío,Nado Suave y Visualización,"400m técnica relajada","Sesión de visualización activa:
+800m continuo muy suave (RPE 5)
+Visualizar cada prueba del Nacional
+6 x 50m técnica perfecta","300m recuperación","Preparación mental final"
+18,2025-06-29,Lunes,Pulimiento Final,1800,Regular,Activación mínima,"400m: Técnica suave","4 x 100m @ 1:50 Crol (RPE 6)
+Solo mantener sensación","200m: Muy suave","Descanso activo, mínima carga"
+18,2025-07-01,Miércoles,Pulimiento Final,1800,Regular,Técnica y relajación,"300m: Técnica muy suave","6 x 50m @ 1:10 Técnica perfecta (RPE 5-6)
+Enfoque en eficiencia","200m: Recuperación","Perfección técnica sin esfuerzo"
+18,2025-07-03,Viernes,Pulimiento Final,1600,Regular,Pre-viaje activación,"300m: Técnica activación","4 x 50m @ 1:00 Suave-Moderado (RPE 6)
+Mantener movilidad","200m: Muy suave","Preparación para viaje a competencia"
+18,2025-07-05,Sábado,1600,Desafío,Sesión Opcional Muy Ligera,"300m técnica relajada","Sesión opcional (si se siente bien):
+600m continuo muy suave (RPE 4-5)
+4 x 25m técnica perfecta","200m recuperación","Opcional: solo si el cuerpo lo pide"
+19,2025-07-06,Lunes,Nacional,1500,Regular,Reconocimiento de instalación,"300m: Técnica suave en piscina oficial","Familiarización con piscina:
+4 x 100m @ 2:00 Suave (RPE 5)
+Probar bloques de salida y virajes","200m: Recuperación","Adaptación a instalaciones de competencia"
+19,2025-07-08,Miércoles,Nacional,1500,Regular,Activación pre-competencia ligera,"400m: Técnica variada suave","4 x 50m @ 1:15 Progresivo (RPE 5-7)
+2 x 25m Sprint simulado (RPE 8)","200m: Muy suave","Mantener activación, evitar fatiga"
+19,2025-07-10,Viernes,Nacional,1500,Regular,Día libre o nado muy ligero (opcional),"200m: Solo si se siente necesario",Descanso completo recomendado o 400m técnica muy suave si se prefiere nadar,"100m: Muy suave","Descanso final pre-competencia"
+19,2025-07-12,Sábado,Variable,Competencia,Pre-calentamiento Nacional - Día 1,"Según horario de pruebas individuales","CAMPEONATO NACIONAL MASTER - DÍA 1
+Calentamiento específico según pruebas
+Pruebas individuales programadas","Enfriamiento según pruebas","Ejecutar plan de carrera preparado"
+20,2025-07-13,Lunes,Nacional,Variable,Competencia,Nacional - Día 2,"Calentamiento según horario de pruebas","CAMPEONATO NACIONAL MASTER - DÍA 2
+Pruebas individuales programadas
+Aplicar estrategias entrenadas","Enfriamiento post-pruebas","Máximo rendimiento, disfrutar competencia"
+20,2025-07-15,Miércoles,Nacional,Variable,Competencia,Nacional - Día 3 (si aplica),"Calentamiento según pruebas finales","CAMPEONATO NACIONAL MASTER - DÍA 3
+Pruebas finales y/o relevos
+Cierre de temporada","Enfriamiento final","Cierre exitoso de temporada"

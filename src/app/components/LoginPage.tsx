@@ -6,10 +6,10 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Waves, Lock, Mail, User, Shield, AlertCircle, Bug, ImageIcon, Settings } from 'lucide-react';
-import { createPasswordRequest } from './PasswordRequestsManager';
 import { toast } from 'sonner';
 import { debugListAllUsers } from '../services/auth';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
+import * as api from '../services/api';
 
 const LOGO_URL_KEY = 'natacion_master_logo_url';
 
@@ -90,7 +90,15 @@ export function LoginPage() {
     setLoading(true);
 
     try {
-      createPasswordRequest(requestName, requestEmail, requestRole);
+      // Enviar solicitud a Supabase mediante la API
+      await api.addPasswordRequest({
+        name: requestName,
+        email: requestEmail,
+        role: requestRole,
+        requestDate: new Date().toISOString(),
+        status: 'pending'
+      });
+      
       toast.success('Solicitud enviada exitosamente');
       setSuccessMessage('Tu solicitud ha sido enviada. El administrador la revisará pronto.');
       // Limpiar formulario

@@ -10,16 +10,10 @@ import { UserPlus, CheckCircle, XCircle, Clock, Copy, Shield, Mail, User, AlertC
 import { toast } from 'sonner';
 import { useAuth } from '../contexts/AuthContext';
 import { checkEmailExists } from '../services/auth';
+import * as api from '../services/api';
 
-interface PasswordRequest {
-  id: string;
-  name: string;
-  email: string;
-  role: 'swimmer' | 'coach';
-  requestDate: string;
-  status: 'pending' | 'approved' | 'rejected';
-  generatedPassword?: string;
-}
+// Usar el tipo de la API
+type PasswordRequest = api.PasswordRequest;
 
 const REQUESTS_KEY = 'natacion_master_password_requests';
 
@@ -103,9 +97,18 @@ export function PasswordRequestsManager() {
     loadRequests();
   }, []);
 
-  const loadRequests = () => {
-    const allRequests = getPasswordRequests();
-    setRequests(allRequests);
+  const loadRequests = async () => {
+    try {
+      // Cargar solicitudes desde Supabase
+      const requests = await api.fetchPasswordRequests();
+      setRequests(requests);
+      console.log('✅ Solicitudes de contraseña cargadas desde Supabase:', requests);
+    } catch (error) {
+      console.error('❌ Error cargando solicitudes:', error);
+      // Fallback a localStorage si falla
+      const localRequests = getPasswordRequests();
+      setRequests(localRequests);
+    }
   };
 
   const handleApproveRequest = async (request: PasswordRequest) => {
@@ -115,15 +118,12 @@ export function PasswordRequestsManager() {
       const emailExists = checkEmailExists(request.email);
       if (emailExists) {
         // Si el usuario ya existe, marcar la solicitud como aprobada pero informar al admin
-        const updatedRequests = requests.map(req => 
-          req.id === request.id 
-            ? { ...req, status: 'approved' as const, generatedPassword: 'Ya existente' }
-            : req
-        );
+        await api.updatePasswordRequest(request.id, {
+          status: 'approved',
+          generatedPassword: 'Ya existente'
+        });
         
-        savePasswordRequests(updatedRequests);
-        setRequests(updatedRequests);
-        
+        await loadRequests(); // Recargar desde Supabase
         toast.error('Este usuario ya tiene una cuenta creada. La solicitud se marcó como aprobada.');
         return;
       }
@@ -141,15 +141,14 @@ export function PasswordRequestsManager() {
       console.log('  - Password:', credentials.password);
       console.log('  - Longitud password:', credentials.password.length);
       
-      // Actualizar el estado de la solicitud
-      const updatedRequests = requests.map(req => 
-        req.id === request.id 
-          ? { ...req, status: 'approved' as const, generatedPassword: credentials.password }
-          : req
-      );
+      // Actualizar el estado de la solicitud en Supabase
+      await api.updatePasswordRequest(request.id, {
+        status: 'approved',
+        generatedPassword: credentials.password
+      });
       
-      savePasswordRequests(updatedRequests);
-      setRequests(updatedRequests);
+      // Recargar solicitudes desde Supabase
+      await loadRequests();
       
       // Mostrar credenciales generadas
       setApprovedCredentials(credentials);
@@ -165,16 +164,19 @@ export function PasswordRequestsManager() {
     }
   };
 
-  const handleRejectRequest = (requestId: string) => {
-    const updatedRequests = requests.map(req => 
-      req.id === requestId 
-        ? { ...req, status: 'rejected' as const }
-        : req
-    );
-    
-    savePasswordRequests(updatedRequests);
-    setRequests(updatedRequests);
-    toast.success('Solicitud rechazada');
+  const handleRejectRequest = async (requestId: string) => {
+    try {
+      // Actualizar el estado en Supabase
+      await api.updatePasswordRequest(requestId, { status: 'rejected' });
+      
+      // Recargar solicitudes
+      await loadRequests();
+      
+      toast.success('Solicitud rechazada');
+    } catch (error) {
+      console.error('❌ Error al rechazar solicitud:', error);
+      toast.error('Error al rechazar solicitud');
+    }
   };
 
   const handleCopyCredentials = () => {

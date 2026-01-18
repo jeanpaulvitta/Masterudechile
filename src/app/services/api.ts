@@ -754,3 +754,88 @@ export async function deleteTestResult(id: string): Promise<void> {
     throw error;
   }
 }
+
+// ==================== PASSWORD REQUESTS API ====================
+
+export interface PasswordRequest {
+  id: string;
+  name: string;
+  email: string;
+  role: 'swimmer' | 'coach';
+  requestDate: string;
+  status: 'pending' | 'approved' | 'rejected';
+  generatedPassword?: string;
+}
+
+export async function fetchPasswordRequests(): Promise<PasswordRequest[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/password-requests`, { headers });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`Failed to fetch password requests: ${error.error || response.statusText}`);
+    }
+    const data = await response.json();
+    console.log('✅ Password requests fetched from server:', data.requests);
+    return data.requests;
+  } catch (error) {
+    console.error('❌ Error fetching password requests:', error);
+    throw error;
+  }
+}
+
+export async function addPasswordRequest(request: Omit<PasswordRequest, 'id'>): Promise<PasswordRequest> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/password-requests`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(request),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`Failed to add password request: ${error.error || response.statusText}`);
+    }
+    const data = await response.json();
+    console.log('✅ Password request added:', data.request);
+    return data.request;
+  } catch (error) {
+    console.error('❌ Error adding password request:', error);
+    throw error;
+  }
+}
+
+export async function updatePasswordRequest(id: string, request: Partial<PasswordRequest>): Promise<PasswordRequest> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/password-requests/${id}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(request),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`Failed to update password request: ${error.error || response.statusText}`);
+    }
+    const data = await response.json();
+    console.log('✅ Password request updated:', data.request);
+    return data.request;
+  } catch (error) {
+    console.error('❌ Error updating password request:', error);
+    throw error;
+  }
+}
+
+export async function deletePasswordRequest(id: string): Promise<void> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/password-requests/${id}`, {
+      method: 'DELETE',
+      headers,
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`Failed to delete password request: ${error.error || response.statusText}`);
+    }
+    console.log('✅ Password request deleted:', id);
+  } catch (error) {
+    console.error('❌ Error deleting password request:', error);
+    throw error;
+  }
+}

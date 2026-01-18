@@ -1055,4 +1055,84 @@ app.delete("/make-server-000a47d9/test-results/:id", async (c) => {
   }
 });
 
+// ==================== PASSWORD REQUESTS ROUTES ====================
+
+// Get all password requests
+app.get("/make-server-000a47d9/password-requests", async (c) => {
+  try {
+    const requests = await kv.get("password-requests:list");
+    return c.json({ requests: requests || [] });
+  } catch (error) {
+    console.error("Error fetching password requests:", error);
+    return c.json({ error: "Failed to fetch password requests", details: String(error) }, 500);
+  }
+});
+
+// Add a new password request
+app.post("/make-server-000a47d9/password-requests", async (c) => {
+  try {
+    const newRequest = await c.req.json();
+    const requests = await kv.get("password-requests:list") || [];
+    
+    // Generate unique ID
+    const id = `req_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+    const requestWithId = { ...newRequest, id };
+    
+    // Add to list
+    const updatedRequests = [...requests, requestWithId];
+    await kv.set("password-requests:list", updatedRequests);
+    
+    console.log("✅ Password request created:", requestWithId);
+    return c.json({ request: requestWithId }, 201);
+  } catch (error) {
+    console.error("Error adding password request:", error);
+    return c.json({ error: "Failed to add password request", details: String(error) }, 500);
+  }
+});
+
+// Update a password request
+app.put("/make-server-000a47d9/password-requests/:id", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const updatedData = await c.req.json();
+    const requests = await kv.get("password-requests:list") || [];
+    
+    const index = requests.findIndex((r: any) => r.id === id);
+    if (index === -1) {
+      return c.json({ error: "Password request not found" }, 404);
+    }
+    
+    requests[index] = { ...requests[index], ...updatedData };
+    await kv.set("password-requests:list", requests);
+    
+    console.log("✅ Password request updated:", requests[index]);
+    return c.json({ request: requests[index] });
+  } catch (error) {
+    console.error("Error updating password request:", error);
+    return c.json({ error: "Failed to update password request", details: String(error) }, 500);
+  }
+});
+
+// Delete a password request
+app.delete("/make-server-000a47d9/password-requests/:id", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const requests = await kv.get("password-requests:list") || [];
+    
+    const filteredRequests = requests.filter((r: any) => r.id !== id);
+    
+    if (filteredRequests.length === requests.length) {
+      return c.json({ error: "Password request not found" }, 404);
+    }
+    
+    await kv.set("password-requests:list", filteredRequests);
+    
+    console.log("✅ Password request deleted:", id);
+    return c.json({ message: "Password request deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting password request:", error);
+    return c.json({ error: "Failed to delete password request", details: String(error) }, 500);
+  }
+});
+
 Deno.serve(app.fetch);

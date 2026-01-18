@@ -155,40 +155,61 @@ export function AttendanceManager({ swimmers, sessions }: AttendanceManagerProps
       const swimmer = swimmers.find(s => s.id === swimmerId);
       const schedule = swimmer?.schedule || "7am";
 
-      if (existingIndex >= 0) {
-        // Actualizar registro existente
-        const existingRecord = attendanceRecords[existingIndex];
-        await api.updateAttendanceRecord(existingRecord.id, {
-          swimmerId,
-          sessionId: selectedSession,
-          date: session.date,
-          schedule,
-          status: apiStatus,
-          distanceCompleted: status === "presente" ? session.distance : 0,
-          notes
-        });
+      const recordData = {
+        swimmerId,
+        sessionId: selectedSession,
+        date: session.date,
+        schedule,
+        status: apiStatus,
+        distanceCompleted: status === "presente" ? session.distance : 0,
+        notes
+      };
 
-        const newRecords = [...attendanceRecords];
-        newRecords[existingIndex] = {
-          ...existingRecord,
-          status,
-          notes,
-          timestamp: Date.now()
-        };
-        setAttendanceRecords(newRecords);
+      let updatedRecord: any;
+
+      if (existingIndex >= 0) {
+        // Intentar actualizar registro existente
+        const existingRecord = attendanceRecords[existingIndex];
+        try {
+          updatedRecord = await api.updateAttendanceRecord(existingRecord.id, recordData);
+          
+          const newRecords = [...attendanceRecords];
+          newRecords[existingIndex] = {
+            ...existingRecord,
+            status,
+            notes,
+            timestamp: Date.now()
+          };
+          setAttendanceRecords(newRecords);
+          console.log('✅ Registro de asistencia actualizado');
+        } catch (updateError: any) {
+          // Si el update falla porque el registro no existe, crear uno nuevo
+          if (updateError.message?.includes('not found') || updateError.message?.includes('Attendance record not found')) {
+            console.log('⚠️ Registro no encontrado, creando uno nuevo...');
+            updatedRecord = await api.addAttendanceRecord(recordData);
+            
+            const newRecords = [...attendanceRecords];
+            newRecords[existingIndex] = {
+              id: updatedRecord.id,
+              sessionId: selectedSession,
+              sessionDate: session.date,
+              sessionType: session.type,
+              swimmerId,
+              status,
+              notes,
+              timestamp: Date.now()
+            };
+            setAttendanceRecords(newRecords);
+            console.log('✅ Nuevo registro de asistencia creado');
+          } else {
+            throw updateError;
+          }
+        }
       } else {
         // Crear nuevo registro
-        const apiRecord = await api.addAttendanceRecord({
-          swimmerId,
-          sessionId: selectedSession,
-          date: session.date,
-          schedule,
-          status: apiStatus,
-          distanceCompleted: status === "presente" ? session.distance : 0,
-          notes
-        });
+        const apiRecord = await api.addAttendanceRecord(recordData);
 
-        const record: AttendanceRecord = {
+        const newRecord: AttendanceRecord = {
           id: apiRecord.id,
           sessionId: selectedSession,
           sessionDate: session.date,
@@ -199,13 +220,12 @@ export function AttendanceManager({ swimmers, sessions }: AttendanceManagerProps
           timestamp: Date.now()
         };
 
-        setAttendanceRecords([...attendanceRecords, record]);
+        setAttendanceRecords([...attendanceRecords, newRecord]);
+        console.log('✅ Nuevo registro de asistencia creado');
       }
-
-      console.log("✅ Asistencia guardada en Supabase");
     } catch (error) {
       console.error("❌ Error guardando asistencia:", error);
-      alert("Error al guardar la asistencia. Por favor intenta de nuevo.");
+      alert("Error al guardar la asistencia. Por favor, intenta nuevamente.");
     }
   };
 
@@ -275,17 +295,12 @@ export function AttendanceManager({ swimmers, sessions }: AttendanceManagerProps
       </Card>
 
       {canRegisterAttendance ? (
-        <Tabs defaultValue="rapido">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="rapido" className="gap-2">
-              <Zap className="w-4 h-4" />
-              <span className="hidden sm:inline">Registro Rápido</span>
-              <span className="sm:hidden">Rápido</span>
-            </TabsTrigger>
+        <Tabs defaultValue="registro">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="registro" className="gap-2">
-              <Edit className="w-4 h-4" />
-              <span className="hidden sm:inline">Editar Registros</span>
-              <span className="sm:hidden">Editar</span>
+              <CheckCircle2 className="w-4 h-4" />
+              <span className="hidden sm:inline">Registrar Asistencia</span>
+              <span className="sm:hidden">Registro</span>
             </TabsTrigger>
             <TabsTrigger value="estadisticas" className="gap-2">
               <Users className="w-4 h-4" />
@@ -299,197 +314,7 @@ export function AttendanceManager({ swimmers, sessions }: AttendanceManagerProps
             </TabsTrigger>
           </TabsList>
 
-          {/* TAB: Registro Rápido */}
-          <TabsContent value="rapido" className="space-y-6">
-            {/* Selector de Sesión */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Zap className="w-6 h-6 text-yellow-600" />
-                  Registro Rápido de Asistencia
-                </CardTitle>
-                <p className="text-sm text-gray-600">
-                  Marca la asistencia con un solo clic usando los botones de estado
-                </p>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <Label>Sesión de Entrenamiento</Label>
-                    <Select value={selectedSession} onValueChange={setSelectedSession}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecciona una sesión..." />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-[300px]">
-                        {sessions.map((session) => (
-                          <SelectItem key={session.id} value={session.id}>
-                            {session.type === "workout" ? "🏊" : "🏆"} Semana {session.week} - {session.date} - {session.mesociclo} ({session.distance}m)
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <Label>Filtrar por Horario</Label>
-                    <Select value={filterSchedule} onValueChange={setFilterSchedule}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos los horarios</SelectItem>
-                        <SelectItem value="7am">Grupo 7:00 AM</SelectItem>
-                        <SelectItem value="8am">Grupo 8:00 AM</SelectItem>
-                        <SelectItem value="9pm">Grupo 9:00 PM</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {selectedSessionData && (
-                  <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                    <h4 className="font-semibold mb-2">Sesión Seleccionada:</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                      <div>
-                        <span className="text-gray-600">Tipo:</span>
-                        <p className="font-semibold">
-                          {selectedSessionData.type === "workout" ? "Entrenamiento Regular" : "Desafío Sábado"}
-                        </p>
-                      </div>
-                      <div>
-                        <span className="text-gray-600">Fecha:</span>
-                        <p className="font-semibold">{selectedSessionData.date}</p>
-                      </div>
-                      <div>
-                        <span className="text-gray-600">Mesociclo:</span>
-                        <p className="font-semibold">{selectedSessionData.mesociclo}</p>
-                      </div>
-                      <div>
-                        <span className="text-gray-600">Distancia:</span>
-                        <p className="font-semibold">{selectedSessionData.distance}m</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Lista de Nadadores para Registro Rápido */}
-            {selectedSession && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Nadadores - Haz clic en el estado</CardTitle>
-                  <p className="text-sm text-gray-600">
-                    Grupo: {filterSchedule === "all" ? "Todos" : filterSchedule.toUpperCase()} ({filteredSwimmers.length} nadadores)
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {filteredSwimmers.map((swimmer) => {
-                      const record = getAttendanceForSession(selectedSession, swimmer.id);
-                      return (
-                        <div 
-                          key={swimmer.id}
-                          className={`p-4 border rounded-lg ${record ? 'bg-green-50 border-green-200' : 'bg-white'}`}
-                        >
-                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                            {/* Nadador Info */}
-                            <div className="flex-1">
-                              <button
-                                onClick={() => handleSwimmerClick(swimmer)}
-                                className="text-left hover:underline hover:text-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded"
-                              >
-                                <p className="font-semibold text-lg">{swimmer.name}</p>
-                              </button>
-                              <div className="flex gap-2 mt-1">
-                                <Badge variant="outline" className="text-xs">{swimmer.schedule}</Badge>
-                                <Badge variant="secondary" className="text-xs">{swimmer.category}</Badge>
-                                {record && (
-                                  <Badge 
-                                    className={`text-xs ${
-                                      record.status === 'presente' ? 'bg-green-600' :
-                                      record.status === 'ausente' ? 'bg-red-600' :
-                                      'bg-yellow-600'
-                                    }`}
-                                  >
-                                    {record.status === 'presente' ? '✓ Presente' :
-                                     record.status === 'ausente' ? '✗ Ausente' :
-                                     '⚠ Justificado'}
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Botones de Estado Rápido */}
-                            <div className="flex gap-2">
-                              <Button
-                                onClick={() => handleQuickAttendance(swimmer.id, 'presente')}
-                                size="sm"
-                                className={`${record?.status === 'presente' ? 'bg-green-700' : 'bg-green-600'} hover:bg-green-700`}
-                              >
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                                <span className="hidden sm:inline">Presente</span>
-                                <span className="sm:hidden">✓</span>
-                              </Button>
-                              
-                              <Button
-                                onClick={() => handleQuickAttendance(swimmer.id, 'ausente')}
-                                size="sm"
-                                className={`${record?.status === 'ausente' ? 'bg-red-700' : 'bg-red-600'} hover:bg-red-700`}
-                              >
-                                <XCircle className="w-4 h-4 mr-1" />
-                                <span className="hidden sm:inline">Ausente</span>
-                                <span className="sm:hidden">✗</span>
-                              </Button>
-                              
-                              <Button
-                                onClick={() => handleQuickAttendance(swimmer.id, 'justificado')}
-                                size="sm"
-                                className={`${record?.status === 'justificado' ? 'bg-yellow-700' : 'bg-yellow-600'} hover:bg-yellow-700`}
-                              >
-                                <AlertCircle className="w-4 h-4 mr-1" />
-                                <span className="hidden sm:inline">Justificado</span>
-                                <span className="sm:hidden">⚠</span>
-                              </Button>
-
-                              {record && (
-                                <Button
-                                  onClick={() => handleDeleteAttendance(record.id)}
-                                  size="sm"
-                                  variant="outline"
-                                  className="border-red-300 text-red-600 hover:bg-red-50"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Mostrar notas si existen */}
-                          {record?.notes && (
-                            <div className="mt-2 text-sm text-gray-600 italic">
-                              Nota: {record.notes}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {!selectedSession && (
-              <Card className="bg-gray-50">
-                <CardContent className="pt-6 text-center text-gray-500">
-                  <Zap className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p>Selecciona una sesión para comenzar el registro rápido</p>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
-
-          {/* TAB: Editar Registros (el original con más opciones) */}
+          {/* TAB: Registro Unificado */}
           <TabsContent value="registro" className="space-y-6">
             {/* Selector de Sesión */}
             <Card>

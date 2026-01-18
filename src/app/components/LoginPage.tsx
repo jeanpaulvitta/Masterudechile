@@ -1,15 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from './ui/card';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Waves, Lock, Mail, User, Shield, AlertCircle, Bug } from 'lucide-react';
-import logo from "figma:asset/f5fa508b6dd6458954cc36bcd7a8a3baa6d8e605.png";
+import { Waves, Lock, Mail, User, Shield, AlertCircle, Bug, ImageIcon, Settings } from 'lucide-react';
 import { createPasswordRequest } from './PasswordRequestsManager';
 import { toast } from 'sonner';
 import { debugListAllUsers } from '../services/auth';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
+
+const LOGO_URL_KEY = 'natacion_master_logo_url';
 
 export function LoginPage() {
   const { login } = useAuth();
@@ -21,6 +23,39 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [logoConfigOpen, setLogoConfigOpen] = useState(false);
+  const [tempLogoUrl, setTempLogoUrl] = useState('');
+  const [logoError, setLogoError] = useState(false);
+
+  // Cargar logo configurado al montar
+  useEffect(() => {
+    const savedLogo = localStorage.getItem(LOGO_URL_KEY);
+    if (savedLogo) {
+      setLogoUrl(savedLogo);
+    }
+  }, []);
+
+  const handleSaveLogo = () => {
+    if (tempLogoUrl.trim()) {
+      localStorage.setItem(LOGO_URL_KEY, tempLogoUrl.trim());
+      setLogoUrl(tempLogoUrl.trim());
+      setLogoError(false);
+      toast.success('Logo actualizado correctamente');
+    } else {
+      // Eliminar logo personalizado
+      localStorage.removeItem(LOGO_URL_KEY);
+      setLogoUrl(null);
+      toast.success('Logo restaurado al predeterminado');
+    }
+    setLogoConfigOpen(false);
+    setTempLogoUrl('');
+  };
+
+  const handleOpenLogoConfig = () => {
+    setTempLogoUrl(logoUrl || '');
+    setLogoConfigOpen(true);
+  };
 
   const handleDebugUsers = () => {
     console.log('🐛 DEBUG - Verificando usuarios...');
@@ -74,14 +109,28 @@ export function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-500 flex items-center justify-center p-4">
       <div className="w-full max-w-4xl">
         {/* Header */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-8 relative">
+          {/* Botón de configuración de logo (esquina superior derecha) */}
+          <button
+            onClick={handleOpenLogoConfig}
+            className="absolute top-0 right-0 p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+            title="Configurar logo"
+          >
+            <Settings className="w-5 h-5" />
+          </button>
+
           <div className="flex justify-center mb-4">
-            <div className="bg-white rounded-full p-4 shadow-2xl">
-              <img
-                src={logo}
-                alt="Natación Master UCH"
-                className="w-20 h-20 object-contain"
-              />
+            <div className="bg-white rounded-full p-6 shadow-2xl">
+              {logoUrl && !logoError ? (
+                <img
+                  src={logoUrl}
+                  alt="Logo"
+                  className="w-16 h-16 object-contain"
+                  onError={() => setLogoError(true)}
+                />
+              ) : (
+                <Waves className="w-16 h-16 text-blue-600" />
+              )}
             </div>
           </div>
           <h1 className="text-4xl font-bold text-white mb-2">
@@ -294,6 +343,78 @@ export function LoginPage() {
           <p className="mt-1">Sistema de gestión de entrenamientos y nadadores</p>
         </div>
       </div>
+
+      {/* Diálogo de configuración de logo */}
+      <Dialog open={logoConfigOpen} onOpenChange={setLogoConfigOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ImageIcon className="w-5 h-5" />
+              Configurar Logo
+            </DialogTitle>
+            <DialogDescription>
+              Personaliza el logo de la página de inicio de sesión
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="logo-url">URL del Logo</Label>
+              <Input
+                id="logo-url"
+                type="url"
+                placeholder="https://ejemplo.com/logo.png"
+                value={tempLogoUrl}
+                onChange={(e) => setTempLogoUrl(e.target.value)}
+              />
+              <p className="text-xs text-gray-500">
+                Ingresa la URL de una imagen (PNG, JPG, SVG). Deja vacío para usar el logo predeterminado.
+              </p>
+            </div>
+
+            {/* Vista previa */}
+            {tempLogoUrl && (
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <p className="text-sm font-semibold mb-2">Vista previa:</p>
+                <div className="flex justify-center">
+                  <div className="bg-white rounded-full p-4 shadow-md">
+                    <img
+                      src={tempLogoUrl}
+                      alt="Vista previa del logo"
+                      className="w-16 h-16 object-contain"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Ejemplos de URLs */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <p className="text-xs font-semibold text-blue-900 mb-1">💡 Ejemplos de servicios gratuitos:</p>
+              <ul className="text-xs text-blue-700 space-y-1">
+                <li>• Imgur.com - Sube tu imagen y copia el enlace directo</li>
+                <li>• ImgBB.com - Hosting gratuito de imágenes</li>
+                <li>• GitHub - Sube a un repositorio y usa el enlace raw</li>
+              </ul>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setLogoConfigOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveLogo}>
+              Guardar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

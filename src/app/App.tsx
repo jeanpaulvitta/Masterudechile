@@ -6,7 +6,10 @@ import { Card, CardContent } from "./components/ui/card";
 import { Button } from "./components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./components/ui/select";
 import { Badge } from "./components/ui/badge";
-import { Users, Calendar, Trophy, Medal, Flag, UserPlus, Filter, Dumbbell, Crown, ClipboardList, Target, TrendingUp, CalendarDays, FileDown, Award, Clipboard, Shield, Waves } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./components/ui/dialog";
+import { Input } from "./components/ui/input";
+import { Label } from "./components/ui/label";
+import { Users, Calendar, Trophy, Medal, Flag, UserPlus, Filter, Dumbbell, Crown, ClipboardList, Target, TrendingUp, CalendarDays, FileDown, Award, Clipboard, Shield, Waves, Settings, ImageIcon } from "lucide-react";
 import { SwimmerDetailsDialog } from "./components/SwimmerDetailsDialog";
 import { AddSwimmerDialog } from "./components/AddSwimmerDialog";
 import { MesocicloCalendar } from "./components/MesocicloCalendar";
@@ -31,6 +34,7 @@ import { TrashManager } from "./components/TrashManager";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { TestControlManager } from "./components/TestControlManager";
 import { UserManager } from "./components/UserManager";
+import { LogoConfig } from "./components/LogoConfig";
 import { Toaster } from "./components/ui/sonner";
 import type { Swimmer, Competition, SwimmerCompetition, PersonalBest, PersonalBestHistory, AttendanceRecord, SwimmerGoal } from "./data/swimmers";
 import type { Workout } from "./data/workouts";
@@ -43,7 +47,6 @@ import { generateAllSwimmersPDF } from "./utils/pdfGenerator";
 import * as api from "./services/api";
 import { isTeamRecord } from "./utils/recordsUtils";
 import { calculateAge, calculateMasterCategory } from "./utils/swimmerUtils";
-import logo from "figma:asset/f5fa508b6dd6458954cc36bcd7a8a3baa6d8e605.png";
 
 // Función auxiliar para convertir tiempo MM:SS.SS a segundos
 function timeToSeconds(time: string): number {
@@ -828,13 +831,7 @@ function MainApp() {
         <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
           <div className="flex items-center justify-between gap-3 sm:gap-6 mb-3 sm:mb-4">
             <div className="flex items-center gap-3 sm:gap-6">
-              <div className="bg-white rounded-lg p-1.5 sm:p-2 shadow-md">
-                <img
-                  src={logo}
-                  alt="Natación Master UCH"
-                  className="w-12 h-12 sm:w-16 sm:h-16 object-contain"
-                />
-              </div>
+              <LogoConfig />
               <div>
                 <h1 className="text-2xl sm:text-4xl font-bold leading-tight">Natación Master UCH</h1>
                 <p className="text-blue-200 text-sm sm:text-lg">Universidad de Chile</p>

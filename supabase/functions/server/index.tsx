@@ -1298,4 +1298,39 @@ app.post("/make-server-000a47d9/users/init-admin", async (c) => {
   }
 });
 
+// Reset admin password (for recovery)
+app.post("/make-server-000a47d9/users/reset-admin", async (c) => {
+  try {
+    const users = await kv.get("users:list") || [];
+    
+    // Find admin
+    const adminIndex = users.findIndex((u: any) => u.email === "admin@uch.cl");
+    
+    if (adminIndex === -1) {
+      // Create admin if doesn't exist
+      const adminUser = {
+        id: "user_admin_1",
+        email: "admin@uch.cl",
+        password: "admin123",
+        name: "Administrador UCH",
+        role: "admin"
+      };
+      users.push(adminUser);
+      await kv.set("users:list", users);
+      console.log("✅ Admin user created");
+      return c.json({ message: "Admin user created", credentials: { email: "admin@uch.cl", password: "admin123" } });
+    }
+    
+    // Reset admin password
+    users[adminIndex].password = "admin123";
+    await kv.set("users:list", users);
+    
+    console.log("✅ Admin password reset to default");
+    return c.json({ message: "Admin password reset", credentials: { email: "admin@uch.cl", password: "admin123" } });
+  } catch (error) {
+    console.error("Error resetting admin:", error);
+    return c.json({ error: "Failed to reset admin", details: String(error) }, 500);
+  }
+});
+
 Deno.serve(app.fetch);

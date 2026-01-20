@@ -41,6 +41,8 @@ interface UserData {
   role: "admin" | "coach" | "swimmer";
   password?: string;
   swimmerId?: string;
+  origin?: "manual" | "request"; // Nuevo campo para identificar el origen
+  requestDate?: string; // Fecha de la solicitud si aplica
 }
 
 interface UserManagerProps {
@@ -96,23 +98,38 @@ export function UserManager({ swimmers }: UserManagerProps) {
     loadUsers();
   }, []);
 
-  const loadUsers = () => {
-    const stored = localStorage.getItem(REGISTERED_USERS_KEY);
-    if (stored) {
-      try {
-        const registeredUsers = JSON.parse(stored);
-        setUsers(registeredUsers);
-      } catch (error) {
-        console.error('Error loading users:', error);
+  const loadUsers = async () => {
+    try {
+      console.log('🔄 Cargando usuarios desde Supabase...');
+      
+      // Limpiar localStorage viejo
+      localStorage.removeItem(REGISTERED_USERS_KEY);
+      console.log('🗑️ localStorage limpiado');
+      
+      // Cargar usuarios desde Supabase
+      const response = await fetch('https://rztiyofwhlwvofwhcgue.supabase.co/functions/v1/make-server-000a47d9/users', {
+        headers: {
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6dGl5b2Z3aGx3dm9md2hjZ3VlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwMTk3ODUsImV4cCI6MjA4MjU5NTc4NX0.cuYH2GPWE4SocLIEHUaPIa8l2wNBifT9NdLKjyeaDsE'
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('✅ Usuarios cargados desde Supabase:', data.users?.length || 0, 'usuarios');
+        console.table(data.users);
+        setUsers(data.users || []);
+      } else {
+        console.error('❌ Error al cargar usuarios desde Supabase:', response.status);
         setUsers([]);
       }
-    } else {
+    } catch (error) {
+      console.error('❌ Error cargando usuarios:', error);
       setUsers([]);
     }
   };
 
-  const saveUsers = (updatedUsers: UserData[]) => {
-    localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(updatedUsers));
+  const saveUsers = async (updatedUsers: UserData[]) => {
+    // Ya no guardar en localStorage
     setUsers(updatedUsers);
   };
 
@@ -189,7 +206,6 @@ export function UserManager({ swimmers }: UserManagerProps) {
               email: formEmail,
               name: formName,
               role: formRole,
-              swimmerId: formRole === "swimmer" && formSwimmerId ? formSwimmerId : undefined,
               ...(formPassword ? { password: formPassword } : {}),
             }
           : u
@@ -203,9 +219,14 @@ export function UserManager({ swimmers }: UserManagerProps) {
         name: formName,
         password: formPassword,
         role: formRole,
-        swimmerId: formRole === "swimmer" && formSwimmerId ? formSwimmerId : undefined,
       };
       saveUsers([...users, newUser]);
+      
+      // Si es nadador, crear ficha automáticamente
+      if (formRole === 'swimmer') {
+        createSwimmerProfile(newUser);
+      }
+      
       setCreatedUserPassword(formPassword);
       setCreatedUserData(newUser);
       setConfirmationDialogOpen(true);
@@ -214,10 +235,127 @@ export function UserManager({ swimmers }: UserManagerProps) {
     handleCloseDialog();
   };
 
-  const handleDelete = (userId: string) => {
-    if (confirm("¿Estás seguro de eliminar este usuario?")) {
-      const updatedUsers = users.filter((u) => u.id !== userId);
-      saveUsers(updatedUsers);
+  const createSwimmerProfile = async (user: UserData) => {
+    try {
+      console.log('🏊‍♂️ Creando ficha automática para:', user.name);
+      
+      const today = new Date();
+      const defaultBirthYear = today.getFullYear() - 25;
+      const monthNum = today.getMonth() + 1;
+      const dayNum = today.getDate();
+      const monthStr = monthNum < 10 ? '0' + monthNum : String(monthNum);
+      const dayStr = dayNum < 10 ? '0' + dayNum : String(dayNum);
+      const defaultDateOfBirth = String(defaultBirthYear) + '-' + monthStr + '-' + dayStr;
+      
+      const swimmerData = {
+        name: user.name,
+        email: user.email,
+        rut: '00.000.000-0',
+        gender: 'Masculino',
+        dateOfBirth: defaultDateOfBirth,
+        schedule: '7am',
+        joinDate: new Date().toISOString().split('T')[0],
+        personalBests: [],
+        personalBestsHistory: [],
+        goals: []
+      };
+      
+      const response = await fetch('https://rztiyofwhlwvofwhcgue.supabase.co/functions/v1/make-server-000a47d9/swimmers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6dGl5b2Z3aGx3dm9md2hjZ3VlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwMTk3ODUsImV4cCI6MjA4MjU5NTc4NX0.cuYH2GPWE4SocLIEHUaPIa8l2wNBifT9NdLKjyeaDsE'
+        },
+        body: JSON.stringify(swimmerData)
+      });
+      
+      if (response.ok) {
+        console.log('✅ Ficha de nadador creada automáticamente');
+      } else {
+        console.error('⚠️ Error al crear ficha automática');
+      }
+    } catch (error) {
+      console.error('⚠️ Error creando ficha de nadador:', error);
+    }
+  };
+
+  const handleDelete = async (userId: string) => {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+    
+    const confirmMsg = user.role === 'swimmer' 
+      ? `¿Estás seguro de eliminar a ${user.name}?\n\n⚠️ Esto también eliminará su ficha de nadador y todos sus datos (marcas, asistencias, etc.)`
+      : `¿Estás seguro de eliminar a ${user.name}?`;
+    
+    if (!confirm(confirmMsg)) return;
+    
+    try {
+      console.log('🗑️ Eliminando usuario:', user.email);
+      
+      // Si es nadador, eliminar primero su ficha
+      if (user.role === 'swimmer') {
+        try {
+          console.log('🏊‍♂️ Buscando ficha de nadador para eliminar...');
+          
+          // Obtener todas las fichas
+          const swimmersRes = await fetch('https://rztiyofwhlwvofwhcgue.supabase.co/functions/v1/make-server-000a47d9/swimmers', {
+            headers: {
+              'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6dGl5b2Z3aGx3dm9md2hjZ3VlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwMTk3ODUsImV4cCI6MjA4MjU5NTc4NX0.cuYH2GPWE4SocLIEHUaPIa8l2wNBifT9NdLKjyeaDsE'
+            }
+          });
+          
+          if (swimmersRes.ok) {
+            const swimmersData = await swimmersRes.json();
+            const swimmer = swimmersData.swimmers?.find((s: any) => s.email === user.email);
+            
+            if (swimmer) {
+              console.log('🗑️ Eliminando ficha de nadador:', swimmer.id);
+              
+              const deleteSwimmerRes = await fetch(`https://rztiyofwhlwvofwhcgue.supabase.co/functions/v1/make-server-000a47d9/swimmers/${swimmer.id}`, {
+                method: 'DELETE',
+                headers: {
+                  'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6dGl5b2Z3aGx3dm9md2hjZ3VlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwMTk3ODUsImV4cCI6MjA4MjU5NTc4NX0.cuYH2GPWE4SocLIEHUaPIa8l2wNBifT9NdLKjyeaDsE'
+                }
+              });
+              
+              if (deleteSwimmerRes.ok) {
+                console.log('✅ Ficha de nadador eliminada');
+              } else {
+                console.warn('⚠️ No se pudo eliminar la ficha de nadador');
+              }
+            } else {
+              console.log('ℹ️ No se encontró ficha de nadador para este usuario');
+            }
+          }
+        } catch (swimmerError) {
+          console.error('⚠️ Error al eliminar ficha de nadador:', swimmerError);
+          // Continuar con la eliminación del usuario aunque falle la ficha
+        }
+      }
+      
+      // Eliminar el usuario de Supabase
+      console.log('🗑️ Eliminando usuario de Supabase...');
+      const deleteUserRes = await fetch(`https://rztiyofwhlwvofwhcgue.supabase.co/functions/v1/make-server-000a47d9/users/${userId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6dGl5b2Z3aGx3dm9md2hjZ3VlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwMTk3ODUsImV4cCI6MjA4MjU5NTc4NX0.cuYH2GPWE4SocLIEHUaPIa8l2wNBifT9NdLKjyeaDsE'
+        }
+      });
+      
+      if (deleteUserRes.ok) {
+        console.log('✅ Usuario eliminado de Supabase');
+        
+        // Recargar usuarios
+        await loadUsers();
+        
+        alert('✅ Usuario eliminado correctamente' + (user.role === 'swimmer' ? ' (incluyendo su ficha de nadador)' : ''));
+      } else {
+        console.error('❌ Error al eliminar usuario de Supabase');
+        alert('❌ Error al eliminar usuario');
+      }
+    } catch (error) {
+      console.error('❌ Error eliminando usuario:', error);
+      alert('❌ Error al eliminar usuario');
     }
   };
 
@@ -241,6 +379,13 @@ export function UserManager({ swimmers }: UserManagerProps) {
     }
   };
 
+  const handleCopyCredentials = (user: UserData) => {
+    // Mostrar las credenciales actuales sin cambiar la contraseña
+    setCreatedUserPassword(user.password || '');
+    setCreatedUserData(user);
+    setConfirmationDialogOpen(true);
+  };
+  
   // Usuarios reales
   const allUsers = users;
 
@@ -290,7 +435,7 @@ export function UserManager({ swimmers }: UserManagerProps) {
       </div>
 
       <Tabs defaultValue="users" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="users" className="gap-2">
             <Users className="w-4 h-4" />
             Usuarios Registrados
@@ -298,10 +443,6 @@ export function UserManager({ swimmers }: UserManagerProps) {
           <TabsTrigger value="requests" className="gap-2">
             <Inbox className="w-4 h-4" />
             Solicitudes de Acceso
-          </TabsTrigger>
-          <TabsTrigger value="debug" className="gap-2">
-            <Bug className="w-4 h-4" />
-            Diagnóstico
           </TabsTrigger>
         </TabsList>
 
@@ -454,6 +595,14 @@ export function UserManager({ swimmers }: UserManagerProps) {
                                 className="text-blue-600 hover:bg-blue-50"
                               >
                                 <Key className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleCopyCredentials(user)}
+                                className="text-green-600 hover:bg-green-50"
+                              >
+                                <Copy className="w-4 h-4" />
                               </Button>
                             </div>
                           </div>
@@ -609,6 +758,12 @@ export function UserManager({ swimmers }: UserManagerProps) {
                       </SelectItem>
                     </SelectContent>
                   </Select>
+                  {formRole === 'swimmer' && (
+                    <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" />
+                      La ficha de nadador se creará automáticamente
+                    </p>
+                  )}
                 </div>
 
                 {/* ID de nadador (solo para swimmers) */}
@@ -735,10 +890,39 @@ export function UserManager({ swimmers }: UserManagerProps) {
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
-                        copyToClipboard(createdUserPassword || "");
-                        setPasswordCopied(true);
-                        setTimeout(() => setPasswordCopied(false), 2000);
+                      onClick={async () => {
+                        try {
+                          const message = `🏊‍♂️ NATACIÓN MASTER UCH - Credenciales de Acceso
+
+¡Hola ${createdUserData?.name}! Tu cuenta ha sido creada.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📧 Email: ${createdUserData?.email}
+🔑 Contraseña: ${createdUserPassword}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📝 INSTRUCCIONES:
+1. Ingresa a la aplicación con estas credenciales
+2. Cambia tu contraseña desde tu perfil (recomendado)
+3. La contraseña es temporal y única
+
+⚠️ IMPORTANTE: 
+• Guarda estas credenciales en un lugar seguro
+• No compartas tu contraseña con nadie
+• Si olvidas tu contraseña, contacta al administrador
+
+¡Bienvenido al equipo! 🏊‍♂️💪`;
+                          
+                          console.log('📋 Intentando copiar:', message);
+                          await copyToClipboard(message);
+                          setPasswordCopied(true);
+                          setTimeout(() => setPasswordCopied(false), 2000);
+                          console.log('✅ Copiado exitosamente');
+                          alert('✅ Credenciales copiadas al portapapeles');
+                        } catch (error) {
+                          console.error('❌ Error al copiar:', error);
+                          alert('❌ Error al copiar. Selecciona y copia el texto manualmente.');
+                        }
                       }}
                       className="absolute right-3 top-3 text-gray-400 hover:text-green-600"
                     >
@@ -787,17 +971,53 @@ export function UserManager({ swimmers }: UserManagerProps) {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => {
-                    copyToClipboard(
-                      `Credenciales de acceso:\n\nEmail: ${createdUserData?.email}\nContraseña: ${createdUserPassword}\n\nInicia sesión en el sistema de Natación Master UCH`
-                    );
-                    setPasswordCopied(true);
-                    setTimeout(() => setPasswordCopied(false), 2000);
+                  onClick={async () => {
+                    try {
+                      const message = `🏊‍♂️ NATACIÓN MASTER UCH - Credenciales de Acceso
+
+¡Hola ${createdUserData?.name}! Tu cuenta ha sido creada.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📧 Email: ${createdUserData?.email}
+🔑 Contraseña: ${createdUserPassword}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📝 INSTRUCCIONES:
+1. Ingresa a la aplicación con estas credenciales
+2. Cambia tu contraseña desde tu perfil (recomendado)
+3. La contraseña es temporal y única
+
+⚠️ IMPORTANTE: 
+• Guarda estas credenciales en un lugar seguro
+• No compartas tu contraseña con nadie
+• Si olvidas tu contraseña, contacta al administrador
+
+¡Bienvenido al equipo! 🏊‍♂️💪`;
+                      
+                      console.log('📋 Intentando copiar:', message);
+                      await copyToClipboard(message);
+                      setPasswordCopied(true);
+                      setTimeout(() => setPasswordCopied(false), 2000);
+                      console.log('✅ Copiado exitosamente');
+                      alert('✅ Credenciales copiadas al portapapeles');
+                    } catch (error) {
+                      console.error('❌ Error al copiar:', error);
+                      alert('❌ Error al copiar. Selecciona y copia el texto manualmente.');
+                    }
                   }}
                   className="gap-2"
                 >
-                  <Copy className="w-4 h-4" />
-                  Copiar Todo
+                  {passwordCopied ? (
+                    <>
+                      <Check className="w-4 h-4" />
+                      ¡Copiado!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-4 h-4" />
+                      Copiar Todo
+                    </>
+                  )}
                 </Button>
                 <Button
                   type="button"
@@ -817,11 +1037,6 @@ export function UserManager({ swimmers }: UserManagerProps) {
         {/* Tab de Solicitudes de Acceso */}
         <TabsContent value="requests" className="space-y-6">
           <PasswordRequestsManager />
-        </TabsContent>
-
-        {/* Tab de Diagnóstico */}
-        <TabsContent value="debug" className="space-y-6">
-          <DebugPanel />
         </TabsContent>
       </Tabs>
     </div>

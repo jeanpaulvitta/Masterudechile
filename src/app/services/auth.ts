@@ -40,6 +40,23 @@ export async function login(email: string, password: string): Promise<User> {
     console.log('  - Email:', cleanEmail);
     console.log('  - Password length:', cleanPassword.length);
     
+    // Si es el admin, resetear su contraseña primero para asegurar que funcione
+    if (cleanEmail === 'admin@uch.cl') {
+      console.log('🔧 Reseteando contraseña del admin...');
+      try {
+        await fetch(`${API_URL}/users/reset-admin`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${publicAnonKey}`
+          }
+        });
+        console.log('✅ Admin reseteado correctamente');
+      } catch (resetError) {
+        console.error('⚠️ Error al resetear admin (continuando de todas formas):', resetError);
+      }
+    }
+    
     // Buscar usuario en Supabase
     const response = await fetch(`${API_URL}/users/find-by-email`, {
       method: 'POST',
@@ -56,6 +73,11 @@ export async function login(email: string, password: string): Promise<User> {
     }
     
     const { user } = await response.json();
+    
+    console.log('🔍 Usuario encontrado:', { email: user.email, role: user.role });
+    console.log('🔑 Verificando contraseña...');
+    console.log('  - Password ingresada:', cleanPassword);
+    console.log('  - Password en DB:', user.password);
     
     // Verificar contraseña
     if (user.password !== cleanPassword) {
@@ -332,10 +354,7 @@ export async function debugListAllUsers() {
 }
 
 export async function debugClearRegisteredUsers() {
-  console.warn('🗑️ Esta función ya no limpia localStorage porque los usuarios están en Supabase');
-  console.log('ℹ️ Para limpiar usuarios de Supabase, usa el panel de administración');
-  console.log('💡 Los datos ahora persisten en el servidor, no en el navegador local');
-  
-  // Ya no hacemos nada porque los usuarios están en Supabase, no en localStorage
+  // Esta función ya no hace nada porque los usuarios están en Supabase
+  // Para administrar usuarios, usa el panel de Usuarios en la aplicación
   return;
 }

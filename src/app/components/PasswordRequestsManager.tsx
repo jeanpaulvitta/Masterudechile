@@ -67,74 +67,114 @@ export function PasswordRequestsManager() {
   const handleApproveRequest = async (request: PasswordRequest) => {
     setLoading(true);
     try {
-      // Verificar si el email ya existe
-      const emailExists = checkEmailExists(request.email);
+      console.log('🔐 Aprobando solicitud para:', request.email);
+      
+      // Verificar si el usuario ya existe en Supabase
+      const emailExists = await checkEmailExists(request.email);
+      
       if (emailExists) {
-        // Si el usuario ya existe, marcar la solicitud como aprobada pero informar al admin
+        toast.error('Este usuario ya tiene una cuenta. Usa "Resetear Contraseña" en Usuarios Registrados.');
         await api.updatePasswordRequest(request.id, {
           status: 'approved',
-          generatedPassword: 'Ya existente'
+          generatedPassword: 'Usuario ya existe'
         });
-        
-        await loadRequests(); // Recargar desde Supabase
-        toast.error('Este usuario ya tiene una cuenta creada. La solicitud se marcó como aprobada.');
+        await loadRequests();
         return;
       }
 
-      console.log('🔐 PasswordRequestsManager - Iniciando aprobación de solicitud:');
-      console.log('  - Email:', request.email);
-      console.log('  - Nombre:', request.name);
-      console.log('  - Rol:', request.role);
-      
-      // Crear la cuenta del usuario
-      const credentials = await createUserAccount(request.email, request.name, request.role);
-      
-      console.log('✅ PasswordRequestsManager - Credenciales recibidas:');
-      console.log('  - Email:', credentials.email);
-      console.log('  - Password:', credentials.password);
-      console.log('  - Longitud password:', credentials.password.length);
-      
-      // IMPORTANTE: Guardar también en localStorage directamente
-      const REGISTERED_USERS_KEY = 'natacion_master_users';
-      const registeredUsers = JSON.parse(localStorage.getItem(REGISTERED_USERS_KEY) || '[]');
-      
-      // Crear el objeto de usuario con el formato correcto
+      // Generar ID y contraseña para el nuevo usuario
       const timestamp = Date.now();
       const randomStr = Math.random().toString(36).substring(2, 11);
-      const userId = `user_${timestamp}_${randomStr}`;
+      const userId = 'user_' + timestamp + '_' + randomStr;
+      const password = userId; // La contraseña es el ID
       
+      console.log('🆕 Creando usuario:', { email: request.email, userId, passwordLength: password.length });
+      
+      // Crear el usuario directamente en Supabase mediante la API
       const newUser = {
         id: userId,
-        email: credentials.email,
+        email: request.email,
         name: request.name,
-        password: credentials.password,
+        password: password,
         role: request.role
       };
       
-      // Agregar a la lista y guardar
-      registeredUsers.push(newUser);
-      localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(registeredUsers));
+      // Llamar a la API para crear el usuario
+      const response = await fetch('https://rztiyofwhlwvofwhcgue.supabase.co/functions/v1/make-server-000a47d9/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6dGl5b2Z3aGx3dm9md2hjZ3VlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwMTk3ODUsImV4cCI6MjA4MjU5NTc4NX0.cuYH2GPWE4SocLIEHUaPIa8l2wNBifT9NdLKjyeaDsE'
+        },
+        body: JSON.stringify(newUser)
+      });
       
-      console.log('✅ Usuario guardado en localStorage:', newUser);
-      console.log('📋 Total usuarios en localStorage:', registeredUsers.length);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Error al crear usuario');
+      }
+      
+      const result = await response.json();
+      const createdUser = result.user;
+      console.log('✅ Usuario creado en Supabase:', createdUser.id);
+      
+      // Si es nadador, crear ficha automáticamente
+      if (request.role === 'swimmer') {
+        try {
+          const today = new Date();
+          const defaultBirthYear = today.getFullYear() - 25;
+          const monthNum = today.getMonth() + 1;
+          const dayNum = today.getDate();
+          const monthStr = monthNum < 10 ? '0' + monthNum : String(monthNum);
+          const dayStr = dayNum < 10 ? '0' + dayNum : String(dayNum);
+          const defaultDateOfBirth = String(defaultBirthYear) + '-' + monthStr + '-' + dayStr;
+          
+          const swimmerData = {
+            name: request.name,
+            email: request.email,
+            rut: '00.000.000-0',
+            gender: 'Masculino',
+            dateOfBirth: defaultDateOfBirth,
+            schedule: '7am',
+            joinDate: new Date().toISOString().split('T')[0],
+            personalBests: [],
+            personalBestsHistory: [],
+            goals: []
+          };
+          
+          await fetch('https://rztiyofwhlwvofwhcgue.supabase.co/functions/v1/make-server-000a47d9/swimmers', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6dGl5b2Z3aGx3dm9md2hjZ3VlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwMTk3ODUsImV4cCI6MjA4MjU5NTc4NX0.cuYH2GPWE4SocLIEHUaPIa8l2wNBifT9NdLKjyeaDsE'
+            },
+            body: JSON.stringify(swimmerData)
+          });
+          
+          console.log('✅ Ficha de nadador creada');
+        } catch (swimmerError) {
+          console.error('⚠️ Error al crear ficha:', swimmerError);
+        }
+      }
       
       // Actualizar el estado de la solicitud en Supabase
       await api.updatePasswordRequest(request.id, {
         status: 'approved',
-        generatedPassword: credentials.password
+        generatedPassword: password
       });
       
-      // Recargar solicitudes desde Supabase
+      // Recargar solicitudes
       await loadRequests();
       
       // Mostrar credenciales generadas
-      setApprovedCredentials(credentials);
+      setApprovedCredentials({ email: request.email, password: password });
       setShowApproveDialog(true);
       
-      console.log('✅ PasswordRequestsManager - Solicitud aprobada y credenciales guardadas');
-      toast.success('Solicitud aprobada y cuenta creada');
+      console.log('✅ Solicitud aprobada completamente');
+      toast.success('¡Cuenta creada exitosamente!');
+      
     } catch (error) {
-      console.error('❌ PasswordRequestsManager - Error al aprobar solicitud:', error);
+      console.error('❌ Error al aprobar solicitud:', error);
       toast.error(error instanceof Error ? error.message : 'Error al aprobar solicitud');
     } finally {
       setLoading(false);
@@ -231,8 +271,19 @@ export function PasswordRequestsManager() {
 
   return (
     <div className="space-y-6">
+      {/* Descripción */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-blue-800">
+            <p className="font-semibold mb-1">Sistema de Solicitudes de Acceso</p>
+            <p>Las solicitudes aprobadas se mueven automáticamente a "Usuarios Registrados" donde puedes copiar las credenciales en cualquier momento.</p>
+          </div>
+        </div>
+      </div>
+
       {/* Estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="border-yellow-200 bg-yellow-50">
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
@@ -241,18 +292,6 @@ export function PasswordRequestsManager() {
                 <p className="text-3xl font-bold text-yellow-700">{pendingRequests.length}</p>
               </div>
               <Clock className="w-8 h-8 text-yellow-500" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-green-200 bg-green-50">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-green-600">Aprobadas</p>
-                <p className="text-3xl font-bold text-green-700">{approvedRequests.length}</p>
-              </div>
-              <CheckCircle className="w-8 h-8 text-green-500" />
             </div>
           </CardContent>
         </Card>
@@ -349,10 +388,27 @@ export function PasswordRequestsManager() {
             Solicitudes Aprobadas
           </CardTitle>
           <CardDescription>
-            Usuarios que ya tienen acceso al sistema. Click en "Copiar Datos" para compartir credenciales.
+            ⚠️ IMPORTANTE: No uses las contraseñas de esta tabla para login. Ve a "Usuarios Registrados" para obtener las credenciales reales.
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-6 mb-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-6 h-6 text-yellow-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-yellow-900 mb-2">⛔ NO USAR ESTAS CONTRASEÑAS</p>
+                <p className="text-sm text-yellow-800 mb-3">
+                  Las contraseñas mostradas aquí pueden estar desactualizadas. Para obtener las credenciales correctas:
+                </p>
+                <ol className="text-sm text-yellow-800 list-decimal list-inside space-y-1">
+                  <li>Ve a la pestaña <strong>"Usuarios Registrados"</strong></li>
+                  <li>Busca el usuario</li>
+                  <li>Haz clic en el botón <strong>🔑 Resetear</strong></li>
+                  <li>Copia las credenciales del diálogo que aparece</li>
+                </ol>
+              </div>
+            </div>
+          </div>
           {approvedRequests.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               No hay solicitudes aprobadas todavía
@@ -391,14 +447,15 @@ export function PasswordRequestsManager() {
                           size="sm"
                           variant="outline"
                           onClick={() => {
-                            const text = `📧 Credenciales de Acceso - Equipo Natación Master UCH\n\n` +
-                              `👤 Nombre: ${request.name}\n` +
-                              `📨 Email: ${request.email}\n` +
-                              `🔑 Contraseña: ${request.generatedPassword}\n` +
-                              `👔 Rol: ${request.role === 'coach' ? 'Entrenador' : 'Nadador'}\n\n` +
-                              `🔗 Acceso al Sistema:\n` +
-                              `Ingresa con tu email y contraseña en el sistema.\n\n` +
-                              `⚠️ IMPORTANTE: Esta contraseña es temporal. Te recomendamos cambiarla desde tu perfil después de iniciar sesión.`;
+                            const nl = '\\n';
+                            const text = '📧 Credenciales de Acceso - Equipo Natación Master UCH' + nl + nl +
+                              '👤 Nombre: ' + request.name + nl +
+                              '📨 Email: ' + request.email + nl +
+                              '🔑 Contraseña: ' + request.generatedPassword + nl +
+                              '👔 Rol: ' + (request.role === 'coach' ? 'Entrenador' : 'Nadador') + nl + nl +
+                              '🔗 Acceso al Sistema:' + nl +
+                              'Ingresa con tu email y contraseña en el sistema.' + nl + nl +
+                              '⚠️ IMPORTANTE: Esta contraseña es temporal. Te recomendamos cambiarla desde tu perfil después de iniciar sesión.';
                             
                             copyToClipboard(text).then(() => {
                               toast.success('✅ Credenciales copiadas al portapapeles');
@@ -542,7 +599,7 @@ export function createPasswordRequest(name: string, email: string, role: 'swimme
   }
   
   const newRequest: PasswordRequest = {
-    id: `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    id: 'req_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
     name,
     email,
     role,

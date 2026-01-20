@@ -63,10 +63,85 @@ export function LoginPage() {
     toast.success('Verifica la consola del navegador (F12)');
   };
 
+  const handleDiagnostics = async () => {
+    try {
+      setLoading(true);
+      console.clear();
+      console.log('🔍 EJECUTANDO DIAGNÓSTICO COMPLETO...\n');
+      
+      // Diagnóstico de usuarios
+      const usersRes = await fetch('https://rztiyofwhlwvofwhcgue.supabase.co/functions/v1/make-server-000a47d9/users', {
+        headers: {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6dGl5b2Z3aGx3dm9md2hjZ3VlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwMTk3ODUsImV4cCI6MjA4MjU5NTc4NX0.cuYH2GPWE4SocLIEHUaPIa8l2wNBifT9NdLKjyeaDsE'}
+      });
+      const users = await usersRes.json();
+      
+      console.log('👤 USUARIOS REGISTRADOS:', users.users?.length || 0);
+      users.users?.forEach((u: any) => {
+        console.log(`\n📧 ${u.email}`);
+        console.log(`   Nombre: ${u.name}`);
+        console.log(`   Rol: ${u.role}`);
+        console.log(`   🔑 Password: ${u.password}`);
+      });
+      
+      // Diagnóstico de solicitudes
+      const requestsRes = await fetch('https://rztiyofwhlwvofwhcgue.supabase.co/functions/v1/make-server-000a47d9/password-requests', {
+        headers: {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6dGl5b2Z3aGx3dm9md2hjZ3VlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwMTk3ODUsImV4cCI6MjA4MjU5NTc4NX0.cuYH2GPWE4SocLIEHUaPIa8l2wNBifT9NdLKjyeaDsE'}
+      });
+      const requests = await requestsRes.json();
+      
+      console.log('\n\n📋 SOLICITUDES:', requests.requests?.length || 0);
+      requests.requests?.forEach((r: any) => {
+        console.log(`\n${r.status === 'approved' ? '✅' : r.status === 'pending' ? '⏳' : '❌'} ${r.name} (${r.email})`);
+        console.log(`   Estado: ${r.status}`);
+        if (r.generatedPassword) {
+          console.log(`   🔑 Password: ${r.generatedPassword}`);
+        }
+      });
+      
+      console.log('\n\n' + '='.repeat(60));
+      console.log('✅ DIAGNÓSTICO COMPLETADO');
+      console.log('='.repeat(60));
+      
+      toast.success('Diagnóstico completado - Revisa la consola (F12)');
+    } catch (error) {
+      console.error('❌ Error en diagnóstico:', error);
+      toast.error('Error en diagnóstico');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleQuickAdminLogin = () => {
     setLoginEmail('admin@uch.cl');
     setLoginPassword('admin123');
     toast.success('Credenciales de admin cargadas');
+  };
+
+  const handleResetAdmin = async () => {
+    try {
+      setLoading(true);
+      console.log('🔧 Reseteando admin manualmente...');
+      
+      const response = await fetch('https://rztiyofwhlwvofwhcgue.supabase.co/functions/v1/make-server-000a47d9/users/reset-admin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6dGl5b2Z3aGx3dm9md2hjZ3VlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwMTk3ODUsImV4cCI6MjA4MjU5NTc4NX0.cuYH2GPWE4SocLIEHUaPIa8l2wNBifT9NdLKjyeaDsE'
+        }
+      });
+      
+      const data = await response.json();
+      console.log('✅ Respuesta reset admin:', data);
+      
+      toast.success('Admin reseteado. Usa: admin@uch.cl / admin123');
+      setLoginEmail('admin@uch.cl');
+      setLoginPassword('admin123');
+    } catch (error) {
+      console.error('❌ Error reseteando admin:', error);
+      toast.error('Error al resetear admin');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -87,27 +162,48 @@ export function LoginPage() {
   const handlePasswordRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccessMessage('');
     setLoading(true);
 
     try {
+      console.log('📝 Enviando solicitud de acceso...');
+      console.log('  - Nombre:', requestName);
+      console.log('  - Email:', requestEmail);
+      console.log('  - Rol:', requestRole);
+      
+      // Validaciones
+      if (!requestName.trim()) {
+        throw new Error('El nombre es obligatorio');
+      }
+      if (!requestEmail.trim()) {
+        throw new Error('El email es obligatorio');
+      }
+      if (!requestEmail.includes('@')) {
+        throw new Error('El email debe ser válido');
+      }
+      
       // Enviar solicitud a Supabase mediante la API
-      await api.addPasswordRequest({
-        name: requestName,
-        email: requestEmail,
+      const newRequest = await api.addPasswordRequest({
+        name: requestName.trim(),
+        email: requestEmail.trim(),
         role: requestRole,
         requestDate: new Date().toISOString(),
         status: 'pending'
       });
       
-      toast.success('Solicitud enviada exitosamente');
-      setSuccessMessage('Tu solicitud ha sido enviada. El administrador la revisará pronto.');
+      console.log('✅ Solicitud creada:', newRequest);
+      toast.success('¡Solicitud enviada exitosamente!');
+      setSuccessMessage('Tu solicitud ha sido enviada. El administrador la revisará pronto y te enviará tus credenciales de acceso.');
+      
       // Limpiar formulario
       setRequestName('');
       setRequestEmail('');
       setRequestRole('swimmer');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al enviar solicitud');
-      toast.error(err instanceof Error ? err.message : 'Error al enviar solicitud');
+      console.error('❌ Error al enviar solicitud:', err);
+      const errorMsg = err instanceof Error ? err.message : 'Error al enviar solicitud';
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -209,20 +305,32 @@ export function LoginPage() {
                   {error && (
                     <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
                       {error}
-                      <div className="mt-2 pt-2 border-t border-red-300">
-                        <p className="text-xs font-semibold mb-1">¿Problemas para iniciar sesión?</p>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            localStorage.clear();
-                            window.location.reload();
-                          }}
-                          className="text-xs h-7"
-                        >
-                          Limpiar caché y recargar
-                        </Button>
+                      <div className="mt-3 pt-3 border-t border-red-300 space-y-2">
+                        <p className="text-xs font-semibold mb-2">¿Problemas para iniciar sesión?</p>
+                        <div className="flex gap-2 flex-wrap">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={handleResetAdmin}
+                            className="text-xs h-7 flex-1"
+                            disabled={loading}
+                          >
+                            🔧 Resetear Admin
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              localStorage.clear();
+                              window.location.reload();
+                            }}
+                            className="text-xs h-7 flex-1"
+                          >
+                            Limpiar caché
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -240,6 +348,21 @@ export function LoginPage() {
                   >
                     {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
                   </Button>
+
+                  {/* Botón de diagnóstico */}
+                  <div className="pt-2 border-t">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleDiagnostics}
+                      className="w-full text-xs text-gray-500 hover:text-gray-700"
+                      disabled={loading}
+                    >
+                      <Bug className="w-3 h-3 mr-1" />
+                      Ver todas las contraseñas (Diagnóstico)
+                    </Button>
+                  </div>
                 </form>
               </TabsContent>
 

@@ -10,17 +10,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
-  // Intentar usar el hook de autenticación
-  let authState;
-  try {
-    authState = useAuth();
-  } catch (error) {
-    console.error('Error accessing auth context:', error);
-    // Si hay un error, mostrar página de login por defecto
-    return <LoginPage />;
-  }
-  
-  const { user, loading } = authState;
+  const { user, loading } = useAuth();
 
   if (loading) {
     return (

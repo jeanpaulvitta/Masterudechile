@@ -21,23 +21,14 @@ import {
   Key,
 } from "lucide-react";
 import type { User } from "../contexts/AuthContext";
+import { supabase } from "../services/supabase";
+import { toast } from "sonner";
 
 interface ChangePasswordDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   user: User;
 }
-
-const REGISTERED_USERS_KEY = 'natacion_master_users';
-
-// Cuenta de administrador del sistema
-const SYSTEM_ADMIN = {
-  id: 'user_admin_1',
-  email: 'admin@uch.cl',
-  password: 'admin123',
-  name: 'Administrador UCH',
-  role: 'admin' as const,
-};
 
 // Función para generar contraseña aleatoria segura
 function generateSecurePassword(length: number = 12): string {
@@ -61,24 +52,6 @@ function generateSecurePassword(length: number = 12): string {
   
   // Mezclar los caracteres
   return password.split('').sort(() => Math.random() - 0.5).join('');
-}
-
-function getRegisteredUsers() {
-  const stored = localStorage.getItem(REGISTERED_USERS_KEY);
-  if (!stored) return [];
-  try {
-    return JSON.parse(stored);
-  } catch {
-    return [];
-  }
-}
-
-function saveRegisteredUsers(users: any[]) {
-  localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(users));
-}
-
-function getAllUsers() {
-  return getRegisteredUsers();
 }
 
 export function ChangePasswordDialog({ open, onOpenChange, user }: ChangePasswordDialogProps) {
@@ -149,59 +122,48 @@ export function ChangePasswordDialog({ open, onOpenChange, user }: ChangePasswor
     setError("");
 
     try {
-      // Simular delay de red
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Verificar si es el administrador del sistema
-      const isSystemAdmin = user.id === SYSTEM_ADMIN.id;
+      console.log('🔐 Cambiando contraseña con Supabase Auth...');
       
-      if (isSystemAdmin) {
-        // Para el admin del sistema, verificar contra la contraseña guardada en localStorage o la por defecto
-        const storedAdminPassword = localStorage.getItem('system_admin_password') || SYSTEM_ADMIN.password;
-        
-        if (currentPassword !== storedAdminPassword) {
-          setError("La contraseña actual es incorrecta");
-          setLoading(false);
-          return;
-        }
-        
-        // Guardar la nueva contraseña del admin en localStorage
-        localStorage.setItem('system_admin_password', newPassword);
-        console.log('✅ Contraseña de administrador del sistema actualizada');
-      } else {
-        // Para usuarios registrados
-        const registeredUsers = getRegisteredUsers();
-        const userIndex = registeredUsers.findIndex((u: any) => u.id === user.id);
-
-        if (userIndex === -1) {
-          setError("Usuario no encontrado en registros");
-          setLoading(false);
-          return;
-        }
-
-        // Verificar contraseña actual
-        if (registeredUsers[userIndex].password !== currentPassword) {
-          setError("La contraseña actual es incorrecta");
-          setLoading(false);
-          return;
-        }
-
-        // Actualizar contraseña
-        registeredUsers[userIndex].password = newPassword;
-        saveRegisteredUsers(registeredUsers);
-        console.log('✅ Contraseña de usuario registrado actualizada');
+      // Paso 1: Verificar contraseña actual intentando hacer login
+      const { error: verifyError } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: currentPassword
+      });
+      
+      if (verifyError) {
+        console.error('❌ Contraseña actual incorrecta:', verifyError);
+        setError("La contraseña actual es incorrecta");
+        setLoading(false);
+        return;
       }
-
+      
+      console.log('✅ Contraseña actual verificada');
+      
+      // Paso 2: Actualizar contraseña con Supabase Auth
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+      
+      if (updateError) {
+        console.error('❌ Error al actualizar contraseña:', updateError);
+        setError(updateError.message || "Error al actualizar la contraseña");
+        setLoading(false);
+        return;
+      }
+      
+      console.log('✅ Contraseña actualizada exitosamente en Supabase Auth');
+      
       setSuccess(true);
-
-      // Cerrar diálogo después de 2 segundos
+      toast.success('¡Contraseña actualizada exitosamente!');
+      
+      // Cerrar el diálogo después de 2 segundos
       setTimeout(() => {
         handleClose();
       }, 2000);
-
+      
     } catch (err) {
       console.error('❌ Error al cambiar contraseña:', err);
-      setError("Ocurrió un error al cambiar la contraseña. Intenta nuevamente.");
+      setError(err instanceof Error ? err.message : "Error al cambiar la contraseña");
     } finally {
       setLoading(false);
     }

@@ -120,9 +120,9 @@ export function LoginPage() {
   const handleResetAdmin = async () => {
     try {
       setLoading(true);
-      console.log('🔧 Reseteando admin manualmente...');
+      console.log('🔧 Reseteando admin en Supabase Auth...');
       
-      const response = await fetch('https://rztiyofwhlwvofwhcgue.supabase.co/functions/v1/make-server-000a47d9/users/reset-admin', {
+      const response = await fetch('https://rztiyofwhlwvofwhcgue.supabase.co/functions/v1/make-server-000a47d9/auth/reset-admin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -133,12 +133,75 @@ export function LoginPage() {
       const data = await response.json();
       console.log('✅ Respuesta reset admin:', data);
       
-      toast.success('Admin reseteado. Usa: admin@uch.cl / admin123');
-      setLoginEmail('admin@uch.cl');
-      setLoginPassword('admin123');
+      if (response.ok) {
+        toast.success('✅ Admin reseteado - Email: admin@uch.cl | Password: admin123');
+        setLoginEmail('admin@uch.cl');
+        setLoginPassword('admin123');
+        setError(''); // Limpiar error
+        
+        // Mostrar las credenciales en la consola
+        console.log('🔑 CREDENCIALES DE ADMIN:');
+        console.log('  Email: admin@uch.cl');
+        console.log('  Password: admin123');
+        console.log('  Ahora puedes hacer clic en "Iniciar Sesión"');
+      } else {
+        console.error('Error response:', data);
+        toast.error(data.error || 'Error al resetear admin');
+      }
     } catch (error) {
       console.error('❌ Error reseteando admin:', error);
-      toast.error('Error al resetear admin');
+      toast.error('Error al resetear admin: ' + (error instanceof Error ? error.message : String(error)));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTestSupabaseAuth = async () => {
+    try {
+      setLoading(true);
+      console.clear();
+      console.log('🔍 VERIFICANDO SUPABASE AUTH...\n');
+      
+      // Test 1: Verificar endpoint de salud
+      console.log('1️⃣ Verificando servidor...');
+      const healthRes = await fetch('https://rztiyofwhlwvofwhcgue.supabase.co/functions/v1/make-server-000a47d9/health', {
+        headers: {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6dGl5b2Z3aGx3dm9md2hjZ3VlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwMTk3ODUsImV4cCI6MjA4MjU5NTc4NX0.cuYH2GPWE4SocLIEHUaPIa8l2wNBifT9NdLKjyeaDsE'}
+      });
+      const health = await healthRes.json();
+      console.log('✅ Servidor funcionando:', health);
+      
+      // Test 2: Listar usuarios de Supabase Auth
+      console.log('\n2️⃣ Listando usuarios en Supabase Auth...');
+      const usersRes = await fetch('https://rztiyofwhlwvofwhcgue.supabase.co/functions/v1/make-server-000a47d9/users', {
+        headers: {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6dGl5b2Z3aGx3dm9md2hjZ3VlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwMTk3ODUsImV4cCI6MjA4MjU5NTc4NX0.cuYH2GPWE4SocLIEHUaPIa8l2wNBifT9NdLKjyeaDsE'}
+      });
+      const users = await usersRes.json();
+      console.log('Total usuarios:', users.users?.length || 0);
+      
+      const adminUser = users.users?.find((u: any) => u.email === 'admin@uch.cl');
+      if (adminUser) {
+        console.log('✅ Usuario admin encontrado:');
+        console.log('   ID:', adminUser.id);
+        console.log('   Email:', adminUser.email);
+        console.log('   Rol:', adminUser.role);
+        console.log('   Metadata:', adminUser.user_metadata);
+      } else {
+        console.log('❌ Usuario admin NO encontrado en Supabase Auth');
+        console.log('   Necesitas hacer clic en "Resetear Admin en Supabase"');
+      }
+      
+      console.log('\n' + '='.repeat(60));
+      console.log('✅ VERIFICACIÓN COMPLETADA');
+      console.log('='.repeat(60));
+      
+      if (!adminUser) {
+        toast.error('Admin no encontrado - Haz clic en "Resetear Admin"');
+      } else {
+        toast.success('Admin encontrado - Puedes intentar login');
+      }
+    } catch (error) {
+      console.error('❌ Error en verificación:', error);
+      toast.error('Error en verificación: ' + (error instanceof Error ? error.message : String(error)));
     } finally {
       setLoading(false);
     }
@@ -313,10 +376,10 @@ export function LoginPage() {
                             variant="outline"
                             size="sm"
                             onClick={handleResetAdmin}
-                            className="text-xs h-7 flex-1"
+                            className="text-xs h-7 flex-1 bg-blue-600 text-white hover:bg-blue-700"
                             disabled={loading}
                           >
-                            🔧 Resetear Admin
+                            🔧 Resetear Admin en Supabase
                           </Button>
                           <Button
                             type="button"
@@ -331,6 +394,9 @@ export function LoginPage() {
                             Limpiar caché
                           </Button>
                         </div>
+                        <p className="text-xs text-red-500 mt-2">
+                          👆 Haz clic en "Resetear Admin en Supabase" para crear/resetear el usuario admin@uch.cl con contraseña admin123
+                        </p>
                       </div>
                     </div>
                   )}
@@ -348,21 +414,6 @@ export function LoginPage() {
                   >
                     {loading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
                   </Button>
-
-                  {/* Botón de diagnóstico */}
-                  <div className="pt-2 border-t">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleDiagnostics}
-                      className="w-full text-xs text-gray-500 hover:text-gray-700"
-                      disabled={loading}
-                    >
-                      <Bug className="w-3 h-3 mr-1" />
-                      Ver todas las contraseñas (Diagnóstico)
-                    </Button>
-                  </div>
                 </form>
               </TabsContent>
 

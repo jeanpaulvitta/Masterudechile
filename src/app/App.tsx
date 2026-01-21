@@ -1281,6 +1281,8 @@ function MainApp() {
 }
 
 export default function App() {
+  console.log('🚀 App component rendering...');
+  
   return (
     <AuthProvider>
       <div>

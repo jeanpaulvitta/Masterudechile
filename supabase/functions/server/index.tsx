@@ -2,7 +2,15 @@ import { Hono } from "npm:hono";
 import { cors } from "npm:hono/cors";
 import { logger } from "npm:hono/logger";
 import * as kv from "./kv_store.tsx";
+import { createClient } from 'npm:@supabase/supabase-js@^2';
+
 const app = new Hono();
+
+// Crear cliente de Supabase con SERVICE ROLE para operaciones de administración
+const supabaseAdmin = createClient(
+  Deno.env.get('SUPABASE_URL') ?? '',
+  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+);
 
 // Enable logger
 app.use('*', logger(console.log));
@@ -1330,6 +1338,300 @@ app.post("/make-server-000a47d9/users/reset-admin", async (c) => {
   } catch (error) {
     console.error("Error resetting admin:", error);
     return c.json({ error: "Failed to reset admin", details: String(error) }, 500);
+  }
+});
+
+// ==================== SUPABASE AUTH ROUTES ====================
+
+// Initialize admin in Supabase Auth
+app.post("/make-server-000a47d9/auth/init-admin", async (c) => {
+  try {
+    console.log("🔧 Initializing admin in Supabase Auth...");
+    
+    // Check if admin already exists in Supabase Auth
+    const { data: existingUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+    
+    if (listError) {
+      console.error("Error listing users:", listError);
+      throw listError;
+    }
+    
+    const adminExists = existingUsers.users.find((u: any) => u.email === "admin@uch.cl");
+    
+    if (adminExists) {
+      console.log("✅ Admin already exists in Supabase Auth");
+      return c.json({ message: "Admin already exists", userId: adminExists.id });
+    }
+    
+    // Create admin user in Supabase Auth
+    const { data: authData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+      email: "admin@uch.cl",
+      password: "admin123",
+      email_confirm: true, // Auto-confirm email
+      user_metadata: {
+        name: "Administrador UCH",
+        role: "admin"
+      }
+    });
+    
+    if (createError) {
+      console.error("Error creating admin:", createError);
+      throw createError;
+    }
+    
+    console.log("✅ Admin user created in Supabase Auth:", authData.user.id);
+    return c.json({ 
+      message: "Admin user created successfully",
+      userId: authData.user.id,
+      email: "admin@uch.cl"
+    });
+  } catch (error) {
+    console.error("Error initializing admin:", error);
+    return c.json({ error: "Failed to initialize admin", details: String(error) }, 500);
+  }
+});
+
+// Reset admin password in Supabase Auth
+app.post("/make-server-000a47d9/auth/reset-admin", async (c) => {
+  try {
+    console.log("🔧 Resetting admin password in Supabase Auth...");
+    
+    // Check if admin exists
+    const { data: existingUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+    
+    if (listError) {
+      console.error("Error listing users:", listError);
+      throw listError;
+    }
+    
+    const adminUser = existingUsers.users.find((u: any) => u.email === "admin@uch.cl");
+    
+    if (!adminUser) {
+      // Create admin if doesn't exist
+      console.log("Admin not found, creating...");
+      const { data: authData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email: "admin@uch.cl",
+        password: "admin123",
+        email_confirm: true,
+        user_metadata: {
+          name: "Administrador UCH",
+          role: "admin"
+        }
+      });
+      
+      if (createError) {
+        console.error("Error creating admin:", createError);
+        throw createError;
+      }
+      
+      console.log("✅ Admin user created");
+      return c.json({ 
+        message: "Admin user created successfully",
+        email: "admin@uch.cl",
+        password: "admin123"
+      });
+    }
+    
+    // Reset password
+    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+      adminUser.id,
+      { password: "admin123" }
+    );
+    
+    if (updateError) {
+      console.error("Error resetting admin password:", updateError);
+      throw updateError;
+    }
+    
+    console.log("✅ Admin password reset successfully");
+    return c.json({ 
+      message: "Admin password reset successfully",
+      email: "admin@uch.cl",
+      password: "admin123"
+    });
+  } catch (error) {
+    console.error("Error resetting admin:", error);
+    return c.json({ error: "Failed to reset admin", details: String(error) }, 500);
+  }
+});
+
+// Create a new user in Supabase Auth (called when approving password requests)
+app.post("/make-server-000a47d9/auth/create-user", async (c) => {
+  try {
+    const { email, name, role, swimmerId } = await c.req.json();
+    
+    console.log("📝 Creating user in Supabase Auth:", { email, name, role });
+    
+    if (!email || !name || !role) {
+      return c.json({ error: "Missing required fields: email, name, role" }, 400);
+    }
+    
+    // Generate a secure random password
+    const password = `${Math.random().toString(36).substring(2, 15)}${Date.now()}`;
+    
+    // Create user in Supabase Auth
+    const { data: authData, error: createError } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true, // Auto-confirm email since we don't have email server configured
+      user_metadata: {
+        name,
+        role,
+        swimmerId: swimmerId || null
+      }
+    });
+    
+    if (createError) {
+      console.error("Error creating user in Supabase Auth:", createError);
+      throw createError;
+    }
+    
+    console.log("✅ User created in Supabase Auth:", authData.user.id);
+    
+    // Return user data with generated password (to show to admin)
+    return c.json({
+      user: {
+        id: authData.user.id,
+        email: authData.user.email,
+        name,
+        role,
+        swimmerId
+      },
+      password // Return password so admin can share it with the user
+    }, 201);
+  } catch (error) {
+    console.error("Error creating user:", error);
+    return c.json({ error: "Failed to create user", details: String(error) }, 500);
+  }
+});
+
+// Login endpoint (verify credentials and return session)
+app.post("/make-server-000a47d9/auth/login", async (c) => {
+  try {
+    const { email, password } = await c.req.json();
+    
+    console.log("🔐 Login attempt for:", email);
+    
+    if (!email || !password) {
+      return c.json({ error: "Missing email or password" }, 400);
+    }
+    
+    // Sign in with Supabase Auth
+    const { data: authData, error: signInError } = await supabaseAdmin.auth.signInWithPassword({
+      email,
+      password
+    });
+    
+    if (signInError) {
+      console.error("Login failed:", signInError.message);
+      return c.json({ error: "Invalid email or password" }, 401);
+    }
+    
+    console.log("✅ Login successful for:", email);
+    
+    // Get user metadata
+    const { name, role, swimmerId } = authData.user.user_metadata || {};
+    
+    // Return user data and session
+    return c.json({
+      user: {
+        id: authData.user.id,
+        email: authData.user.email,
+        name: name || email,
+        role: role || "swimmer",
+        swimmerId: swimmerId || null
+      },
+      session: authData.session
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+    return c.json({ error: "Login failed", details: String(error) }, 500);
+  }
+});
+
+// Get user by access token
+app.get("/make-server-000a47d9/auth/user", async (c) => {
+  try {
+    const authHeader = c.req.header("Authorization");
+    
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return c.json({ error: "Missing or invalid authorization header" }, 401);
+    }
+    
+    const token = authHeader.substring(7);
+    
+    // Verify token and get user
+    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
+    
+    if (userError || !userData.user) {
+      console.error("Error getting user:", userError);
+      return c.json({ error: "Invalid or expired token" }, 401);
+    }
+    
+    const { name, role, swimmerId } = userData.user.user_metadata || {};
+    
+    return c.json({
+      user: {
+        id: userData.user.id,
+        email: userData.user.email,
+        name: name || userData.user.email,
+        role: role || "swimmer",
+        swimmerId: swimmerId || null
+      }
+    });
+  } catch (error) {
+    console.error("Error verifying token:", error);
+    return c.json({ error: "Failed to verify token", details: String(error) }, 500);
+  }
+});
+
+// Update user password
+app.post("/make-server-000a47d9/auth/update-password", async (c) => {
+  try {
+    const { userId, newPassword } = await c.req.json();
+    
+    if (!userId || !newPassword) {
+      return c.json({ error: "Missing userId or newPassword" }, 400);
+    }
+    
+    // Update password in Supabase Auth
+    const { data, error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+      password: newPassword
+    });
+    
+    if (error) {
+      console.error("Error updating password:", error);
+      throw error;
+    }
+    
+    console.log("✅ Password updated for user:", userId);
+    return c.json({ message: "Password updated successfully" });
+  } catch (error) {
+    console.error("Error updating password:", error);
+    return c.json({ error: "Failed to update password", details: String(error) }, 500);
+  }
+});
+
+// Delete user from Supabase Auth
+app.delete("/make-server-000a47d9/auth/user/:userId", async (c) => {
+  try {
+    const userId = c.req.param("userId");
+    
+    console.log("🗑️ Deleting user from Supabase Auth:", userId);
+    
+    // Delete user from Supabase Auth
+    const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
+    
+    if (error) {
+      console.error("Error deleting user:", error);
+      throw error;
+    }
+    
+    console.log("✅ User deleted from Supabase Auth:", userId);
+    return c.json({ message: "User deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    return c.json({ error: "Failed to delete user", details: String(error) }, 500);
   }
 });
 

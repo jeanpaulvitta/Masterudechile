@@ -36,7 +36,7 @@ export function PasswordRequestsManager() {
   const [requests, setRequests] = useState<PasswordRequest[]>([]);
   const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<PasswordRequest | null>(null);
-  const [approvedCredentials, setApprovedCredentials] = useState<{ email: string; password: string } | null>(null);
+  const [approvedCredentials, setApprovedCredentials] = useState<{ email: string; password: string; name: string; role: 'swimmer' | 'coach' } | null>(null);
   const [copied, setCopied] = useState(false);
   const [copiedEmail, setCopiedEmail] = useState(false);
   const [copiedPassword, setCopiedPassword] = useState(false);
@@ -69,54 +69,39 @@ export function PasswordRequestsManager() {
     try {
       console.log('🔐 Aprobando solicitud para:', request.email);
       
-      // Verificar si el usuario ya existe en Supabase
-      const emailExists = await checkEmailExists(request.email);
-      
-      if (emailExists) {
-        toast.error('Este usuario ya tiene una cuenta. Usa "Resetear Contraseña" en Usuarios Registrados.');
-        await api.updatePasswordRequest(request.id, {
-          status: 'approved',
-          generatedPassword: 'Usuario ya existe'
-        });
-        await loadRequests();
-        return;
-      }
-
-      // Generar ID y contraseña para el nuevo usuario
-      const timestamp = Date.now();
-      const randomStr = Math.random().toString(36).substring(2, 11);
-      const userId = 'user_' + timestamp + '_' + randomStr;
-      const password = userId; // La contraseña es el ID
-      
-      console.log('🆕 Creando usuario:', { email: request.email, userId, passwordLength: password.length });
-      
-      // Crear el usuario directamente en Supabase mediante la API
-      const newUser = {
-        id: userId,
-        email: request.email,
-        name: request.name,
-        password: password,
-        role: request.role
-      };
-      
-      // Llamar a la API para crear el usuario
-      const response = await fetch('https://rztiyofwhlwvofwhcgue.supabase.co/functions/v1/make-server-000a47d9/users', {
+      // Crear usuario en Supabase Auth vía servidor
+      const response = await fetch('https://rztiyofwhlwvofwhcgue.supabase.co/functions/v1/make-server-000a47d9/auth/create-user', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6dGl5b2Z3aGx3dm9md2hjZ3VlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwMTk3ODUsImV4cCI6MjA4MjU5NTc4NX0.cuYH2GPWE4SocLIEHUaPIa8l2wNBifT9NdLKjyeaDsE'
         },
-        body: JSON.stringify(newUser)
+        body: JSON.stringify({
+          email: request.email,
+          name: request.name,
+          role: request.role
+        })
       });
       
       if (!response.ok) {
         const errorData = await response.json();
+        
+        // Si el usuario ya existe, mostrar mensaje apropiado
+        if (errorData.error?.includes('already') || response.status === 400) {
+          toast.error('Este usuario ya tiene una cuenta en el sistema');
+          await api.updatePasswordRequest(request.id, {
+            status: 'approved',
+            generatedPassword: 'Usuario ya existe'
+          });
+          await loadRequests();
+          return;
+        }
+        
         throw new Error(errorData.error || 'Error al crear usuario');
       }
       
-      const result = await response.json();
-      const createdUser = result.user;
-      console.log('✅ Usuario creado en Supabase:', createdUser.id);
+      const { user: createdUser, password: generatedPassword } = await response.json();
+      console.log('✅ Usuario creado en Supabase Auth:', createdUser.id);
       
       // Si es nadador, crear ficha automáticamente
       if (request.role === 'swimmer') {
@@ -160,18 +145,18 @@ export function PasswordRequestsManager() {
       // Actualizar el estado de la solicitud en Supabase
       await api.updatePasswordRequest(request.id, {
         status: 'approved',
-        generatedPassword: password
+        generatedPassword: generatedPassword
       });
       
       // Recargar solicitudes
       await loadRequests();
       
       // Mostrar credenciales generadas
-      setApprovedCredentials({ email: request.email, password: password });
+      setApprovedCredentials({ email: request.email, password: generatedPassword, name: request.name, role: request.role });
       setShowApproveDialog(true);
       
       console.log('✅ Solicitud aprobada completamente');
-      toast.success('¡Cuenta creada exitosamente!');
+      toast.success('¡Cuenta creada exitosamente en Supabase Auth!');
       
     } catch (error) {
       console.error('❌ Error al aprobar solicitud:', error);
@@ -193,6 +178,98 @@ export function PasswordRequestsManager() {
     } catch (error) {
       console.error('❌ Error al rechazar solicitud:', error);
       toast.error('Error al rechazar solicitud');
+    }
+  };
+
+  const handleDeleteRequest = async (requestId: string) => {
+    if (!confirm('¿Estás seguro de eliminar esta solicitud?')) return;
+    
+    try {
+      await api.deletePasswordRequest(requestId);
+      await loadRequests();
+      toast.success('Solicitud eliminada');
+    } catch (error) {
+      console.error('❌ Error al eliminar solicitud:', error);
+      
+      // Si la solicitud ya no existe, solo recargar
+      if (error instanceof Error && error.message.includes('not found')) {
+        toast.info('La solicitud ya fue eliminada');
+        await loadRequests();
+      } else {
+        toast.error('Error al eliminar solicitud');
+      }
+    }
+  };
+
+  const handleClearApproved = async () => {
+    if (!confirm('¿Estás seguro de limpiar todas las solicitudes aprobadas? Esto solo elimina los registros de solicitud, no las cuentas de usuario.')) return;
+    
+    try {
+      const approvedIds = approvedRequests.map(r => r.id);
+      let deletedCount = 0;
+      let errorCount = 0;
+      
+      for (const id of approvedIds) {
+        try {
+          await api.deletePasswordRequest(id);
+          deletedCount++;
+        } catch (error) {
+          console.error(`Error eliminando solicitud ${id}:`, error);
+          // Si ya no existe, contar como eliminada
+          if (error instanceof Error && error.message.includes('not found')) {
+            deletedCount++;
+          } else {
+            errorCount++;
+          }
+        }
+      }
+      
+      await loadRequests();
+      
+      if (errorCount === 0) {
+        toast.success(`✅ ${deletedCount} solicitudes aprobadas eliminadas`);
+      } else {
+        toast.warning(`⚠️ ${deletedCount} eliminadas, ${errorCount} errores`);
+      }
+    } catch (error) {
+      console.error('❌ Error al limpiar solicitudes aprobadas:', error);
+      toast.error('Error al limpiar solicitudes');
+    }
+  };
+
+  const handleClearRejected = async () => {
+    if (!confirm('¿Estás seguro de limpiar todas las solicitudes rechazadas?')) return;
+    
+    try {
+      const rejectedIds = rejectedRequests.map(r => r.id);
+      let deletedCount = 0;
+      let errorCount = 0;
+      
+      for (const id of rejectedIds) {
+        try {
+          await api.deletePasswordRequest(id);
+          deletedCount++;
+        } catch (error) {
+          console.error(`Error eliminando solicitud ${id}:`, error);
+          // Si ya no existe, contar como eliminada
+          if (error instanceof Error && error.message.includes('not found')) {
+            deletedCount++;
+          } else {
+            errorCount++;
+          }
+        }
+      }
+      
+      await loadRequests();
+      
+      if (errorCount === 0) {
+        toast.success(`✅ ${deletedCount} solicitudes rechazadas eliminadas`);
+      } else {
+        toast.warning(`⚠️ ${deletedCount} eliminadas, ${errorCount} errores`);
+      }
+    } catch (error) {
+      console.error('❌ Error al limpiar solicitudes rechazadas:', error);
+      toast.error('Error al limpiar solicitudes');
     }
   };
 
@@ -369,6 +446,15 @@ export function PasswordRequestsManager() {
                             <XCircle className="w-4 h-4 mr-1" />
                             Rechazar
                           </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleDeleteRequest(request.id)}
+                            disabled={loading}
+                          >
+                            <XCircle className="w-4 h-4 mr-1" />
+                            Eliminar
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -383,32 +469,30 @@ export function PasswordRequestsManager() {
       {/* Solicitudes Aprobadas */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CheckCircle className="w-5 h-5 text-green-600" />
-            Solicitudes Aprobadas
-          </CardTitle>
-          <CardDescription>
-            ⚠️ IMPORTANTE: No uses las contraseñas de esta tabla para login. Ve a "Usuarios Registrados" para obtener las credenciales reales.
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-green-600" />
+                Solicitudes Aprobadas ({approvedRequests.length})
+              </CardTitle>
+              <CardDescription>
+                Usuarios que ya tienen acceso al sistema. Puedes copiar sus credenciales aquí.
+              </CardDescription>
+            </div>
+            {approvedRequests.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClearApproved}
+                className="text-red-600 hover:bg-red-50"
+              >
+                <XCircle className="w-4 h-4 mr-2" />
+                Limpiar Aprobadas
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-6 mb-4">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="w-6 h-6 text-yellow-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="font-bold text-yellow-900 mb-2">⛔ NO USAR ESTAS CONTRASEÑAS</p>
-                <p className="text-sm text-yellow-800 mb-3">
-                  Las contraseñas mostradas aquí pueden estar desactualizadas. Para obtener las credenciales correctas:
-                </p>
-                <ol className="text-sm text-yellow-800 list-decimal list-inside space-y-1">
-                  <li>Ve a la pestaña <strong>"Usuarios Registrados"</strong></li>
-                  <li>Busca el usuario</li>
-                  <li>Haz clic en el botón <strong>🔑 Resetear</strong></li>
-                  <li>Copia las credenciales del diálogo que aparece</li>
-                </ol>
-              </div>
-            </div>
-          </div>
           {approvedRequests.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               No hay solicitudes aprobadas todavía
@@ -443,31 +527,41 @@ export function PasswordRequestsManager() {
                       </TableCell>
                       <TableCell>{new Date(request.requestDate).toLocaleDateString()}</TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            const nl = '\\n';
-                            const text = '📧 Credenciales de Acceso - Equipo Natación Master UCH' + nl + nl +
-                              '👤 Nombre: ' + request.name + nl +
-                              '📨 Email: ' + request.email + nl +
-                              '🔑 Contraseña: ' + request.generatedPassword + nl +
-                              '👔 Rol: ' + (request.role === 'coach' ? 'Entrenador' : 'Nadador') + nl + nl +
-                              '🔗 Acceso al Sistema:' + nl +
-                              'Ingresa con tu email y contraseña en el sistema.' + nl + nl +
-                              '⚠️ IMPORTANTE: Esta contraseña es temporal. Te recomendamos cambiarla desde tu perfil después de iniciar sesión.';
-                            
-                            copyToClipboard(text).then(() => {
-                              toast.success('✅ Credenciales copiadas al portapapeles');
-                            }).catch(error => {
-                              toast.error(error instanceof Error ? error.message : 'Error al copiar');
-                            });
-                          }}
-                          className="gap-1"
-                        >
-                          <Copy className="w-3 h-3" />
-                          Copiar Datos
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              const nl = '\\n';
+                              const text = '📧 Credenciales de Acceso - Equipo Natación Master UCH' + nl + nl +
+                                '👤 Nombre: ' + request.name + nl +
+                                '📨 Email: ' + request.email + nl +
+                                '🔑 Contraseña: ' + request.generatedPassword + nl +
+                                '👔 Rol: ' + (request.role === 'coach' ? 'Entrenador' : 'Nadador') + nl + nl +
+                                '🔗 Acceso al Sistema:' + nl +
+                                'Ingresa con tu email y contraseña en el sistema.' + nl + nl +
+                                '⚠️ IMPORTANTE: Esta contraseña es temporal. Te recomendamos cambiarla desde tu perfil después de iniciar sesión.';
+                              
+                              copyToClipboard(text).then(() => {
+                                toast.success('✅ Credenciales copiadas al portapapeles');
+                              }).catch(error => {
+                                toast.error(error instanceof Error ? error.message : 'Error al copiar');
+                              });
+                            }}
+                            className="gap-1"
+                          >
+                            <Copy className="w-3 h-3" />
+                            Copiar Datos
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleDeleteRequest(request.id)}
+                          >
+                            <XCircle className="w-4 h-4 mr-1" />
+                            Eliminar
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -477,6 +571,73 @@ export function PasswordRequestsManager() {
           )}
         </CardContent>
       </Card>
+
+      {/* Solicitudes Rechazadas */}
+      {rejectedRequests.length > 0 && (
+        <Card className="border-red-200">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <XCircle className="w-5 h-5 text-red-600" />
+                  Solicitudes Rechazadas ({rejectedRequests.length})
+                </CardTitle>
+                <CardDescription>
+                  Solicitudes que fueron rechazadas. Puedes eliminarlas individualmente o limpiar todas.
+                </CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleClearRejected}
+                className="text-red-600 hover:bg-red-50"
+              >
+                <XCircle className="w-4 h-4 mr-2" />
+                Limpiar Rechazadas
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Rol</TableHead>
+                    <TableHead>Fecha</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {rejectedRequests.map((request) => (
+                    <TableRow key={request.id}>
+                      <TableCell className="font-medium">{request.name}</TableCell>
+                      <TableCell>{request.email}</TableCell>
+                      <TableCell>
+                        <Badge variant={request.role === 'coach' ? 'default' : 'secondary'}>
+                          {request.role === 'coach' ? 'Entrenador' : 'Nadador'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{new Date(request.requestDate).toLocaleDateString()}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleDeleteRequest(request.id)}
+                        >
+                          <XCircle className="w-4 h-4 mr-1" />
+                          Eliminar
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Dialog de credenciales aprobadas */}
       <Dialog open={showApproveDialog} onOpenChange={setShowApproveDialog}>
@@ -504,11 +665,26 @@ export function PasswordRequestsManager() {
               </div>
 
               <div className="space-y-3">
+                {/* Nombre del usuario */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-1">
+                    <Label className="text-xs text-gray-600 flex items-center gap-1">
+                      <User className="w-3 h-3" />
+                      Nombre Completo
+                    </Label>
+                  </div>
+                  <p className="font-semibold text-blue-900">{approvedCredentials.name}</p>
+                  <p className="text-xs text-blue-700 mt-1">
+                    Rol: {approvedCredentials.role === 'coach' ? 'Entrenador' : 'Nadador'}
+                  </p>
+                </div>
+
+                {/* Email */}
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
                   <div className="flex items-center justify-between mb-1">
                     <Label className="text-xs text-gray-600 flex items-center gap-1">
                       <Mail className="w-3 h-3" />
-                      Correo Electrónico
+                      Correo Electrónico (Usuario)
                     </Label>
                     <Button
                       size="sm"
@@ -523,9 +699,10 @@ export function PasswordRequestsManager() {
                       )}
                     </Button>
                   </div>
-                  <p className="font-mono text-sm break-all select-all">{approvedCredentials.email}</p>
+                  <p className="font-mono text-sm break-all select-all bg-white px-2 py-1 rounded border">{approvedCredentials.email}</p>
                 </div>
 
+                {/* Contraseña */}
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
                   <div className="flex items-center justify-between mb-1">
                     <Label className="text-xs text-gray-600 flex items-center gap-1">
@@ -545,7 +722,22 @@ export function PasswordRequestsManager() {
                       )}
                     </Button>
                   </div>
-                  <p className="font-mono text-sm break-all select-all">{approvedCredentials.password}</p>
+                  <p className="font-mono text-sm break-all select-all bg-white px-2 py-1 rounded border font-bold">{approvedCredentials.password}</p>
+                </div>
+
+                {/* Información adicional */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="flex items-start gap-2">
+                    <Mail className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <div className="text-xs text-blue-800 space-y-1">
+                      <p><strong>📌 Instrucciones para el usuario:</strong></p>
+                      <ol className="list-decimal list-inside space-y-1 ml-2">
+                        <li>Ingresa con tu email y contraseña</li>
+                        <li>Cambia tu contraseña desde tu perfil</li>
+                        <li>Completa tu información personal</li>
+                      </ol>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

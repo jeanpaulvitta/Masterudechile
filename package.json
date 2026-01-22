@@ -4,8 +4,11 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
+    "dev": "vite",
     "build": "vite build",
-    "dev": "vite"
+    "preview": "vite preview",
+    "pwa:check": "echo 'Abre Chrome DevTools → Lighthouse → PWA para verificar la instalación'",
+    "icons:generate": "echo 'Visita /icon-generator.html en tu navegador para generar los íconos PNG'"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",

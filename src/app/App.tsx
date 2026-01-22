@@ -38,6 +38,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { TestControlManager } from "./components/TestControlManager";
 import { UserManager } from "./components/UserManager";
 import { LogoConfig } from "./components/LogoConfig";
+import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 import { Toaster } from "./components/ui/sonner";
 import type { Swimmer, Competition, SwimmerCompetition, PersonalBest, PersonalBestHistory, AttendanceRecord, SwimmerGoal } from "./data/swimmers";
 import type { Workout } from "./data/workouts";
@@ -1319,6 +1320,7 @@ export default function App() {
         <ProtectedRoute>
           <MainApp />
         </ProtectedRoute>
+        <PWAInstallPrompt />
         <Toaster />
       </div>
     </AuthProvider>

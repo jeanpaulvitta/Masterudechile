@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generador de Íconos PWA - Master UCH</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f8fafc;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .header h1 {
+      color: #0ea5e9;
+      margin-bottom: 10px;
+    }
+    .preview {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 20px;
+      margin: 30px 0;
+    }
+    .icon-preview {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    .icon-preview canvas {
+      max-width: 100%;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+    .icon-preview .size {
+      font-weight: 600;
+      color: #0ea5e9;
+      margin-bottom: 8px;
+    }
+    .icon-preview button {
+      background: #0ea5e9;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      width: 100%;
+    }
+    .icon-preview button:hover {
+      background: #0284c7;
+    }
+    .instructions {
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin-top: 30px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .instructions h2 {
+      color: #0f172a;
+      margin-top: 0;
+    }
+    .instructions ol {
+      line-height: 1.8;
+    }
+    .download-all {
+      background: #10b981;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 16px;
+      margin: 20px auto;
+      display: block;
+    }
+    .download-all:hover {
+      background: #059669;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🏊‍♂️ Generador de Íconos PWA</h1>
+    <p>Master UCH - Universidad de Chile</p>
+  </div>
+
+  <button class="download-all" onclick="downloadAll()">
+    📥 Descargar Todos los Íconos
+  </button>
+
+  <div class="preview" id="iconGrid"></div>
+
+  <div class="instructions">
+    <h2>📋 Instrucciones</h2>
+    <ol>
+      <li><strong>Descarga los íconos:</strong> Haz clic en el botón verde "Descargar Todos" o descarga individualmente.</li>
+      <li><strong>Guarda en la carpeta correcta:</strong> Coloca los archivos PNG en <code>/public/icons/</code></li>
+      <li><strong>Verifica los nombres:</strong> Los archivos deben llamarse <code>icon-72x72.png</code>, <code>icon-192x192.png</code>, etc.</li>
+      <li><strong>Despliega:</strong> Sube los cambios a Vercel para que la PWA funcione completamente.</li>
+    </ol>
+    <p><strong>Nota:</strong> Los íconos de 192x192 y 512x512 son obligatorios para PWA.</p>
+  </div>
+
+  <script>
+    const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+    const svgTemplate = `
+<svg width="SIZE" height="SIZE" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gradient" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" style="stop-color:#0ea5e9;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0284c7;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="110" fill="url(#gradient)"/>
+  <path d="M50 280 Q 90 260, 130 280 T 210 280 T 290 280 T 370 280 T 450 280" stroke="rgba(255,255,255,0.3)" stroke-width="4" fill="none"/>
+  <path d="M50 320 Q 90 300, 130 320 T 210 320 T 290 320 T 370 320 T 450 320" stroke="rgba(255,255,255,0.2)" stroke-width="4" fill="none"/>
+  <g transform="translate(256, 200)">
+    <circle cx="0" cy="-30" r="35" fill="white"/>
+    <path d="M 0 5 L 0 70" stroke="white" stroke-width="20" stroke-linecap="round"/>
+    <path d="M 0 20 Q 60 -10, 90 10" stroke="white" stroke-width="18" stroke-linecap="round"/>
+    <path d="M 0 25 Q -50 40, -70 55" stroke="white" stroke-width="16" stroke-linecap="round"/>
+    <path d="M 0 70 Q 20 90, 35 110" stroke="white" stroke-width="16" stroke-linecap="round"/>
+    <path d="M 0 70 Q -20 90, -30 105" stroke="white" stroke-width="16" stroke-linecap="round"/>
+  </g>
+  <circle cx="380" cy="170" r="8" fill="rgba(255,255,255,0.6)"/>
+  <circle cx="410" cy="185" r="6" fill="rgba(255,255,255,0.5)"/>
+  <circle cx="395" cy="155" r="5" fill="rgba(255,255,255,0.4)"/>
+  <circle cx="140" cy="240" r="7" fill="rgba(255,255,255,0.5)"/>
+  <circle cx="120" cy="225" r="5" fill="rgba(255,255,255,0.4)"/>
+  <text x="256" y="420" font-family="Arial, sans-serif" font-size="80" font-weight="bold" fill="white" text-anchor="middle">UCH</text>
+  <text x="256" y="455" font-family="Arial, sans-serif" font-size="28" font-weight="600" fill="rgba(255,255,255,0.9)" text-anchor="middle">MASTER</text>
+</svg>`;
+
+    const canvases = {};
+
+    function createIcon(size) {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+
+      const svg = svgTemplate.replace(/SIZE/g, size);
+      const blob = new Blob([svg], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+
+      const img = new Image();
+      img.onload = function() {
+        ctx.drawImage(img, 0, 0, size, size);
+        URL.revokeObjectURL(url);
+      };
+      img.src = url;
+
+      canvases[size] = canvas;
+      return canvas;
+    }
+
+    function downloadIcon(size) {
+      const canvas = canvases[size];
+      canvas.toBlob(function(blob) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `icon-${size}x${size}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+    }
+
+    function downloadAll() {
+      sizes.forEach((size, index) => {
+        setTimeout(() => {
+          downloadIcon(size);
+        }, index * 200); // Delay para evitar bloqueos
+      });
+      alert('✅ Descargando todos los íconos... Verifica tu carpeta de descargas.');
+    }
+
+    // Generar grid de íconos
+    const grid = document.getElementById('iconGrid');
+    sizes.forEach(size => {
+      const div = document.createElement('div');
+      div.className = 'icon-preview';
+      
+      const sizeLabel = document.createElement('div');
+      sizeLabel.className = 'size';
+      sizeLabel.textContent = `${size}x${size}`;
+      
+      const canvas = createIcon(size);
+      
+      const button = document.createElement('button');
+      button.textContent = '📥 Descargar';
+      button.onclick = () => downloadIcon(size);
+      
+      div.appendChild(sizeLabel);
+      div.appendChild(canvas);
+      div.appendChild(button);
+      grid.appendChild(div);
+    });
+  </script>
+</body>
+</html>

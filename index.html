@@ -1,15 +1,66 @@
-
-  <!DOCTYPE html>
-  <html lang="en">
-    <head>
-      <meta charset="UTF-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <title>MASTER U DE CHILE</title>
-    </head>
-
-    <body>
-      <div id="root"></div>
-      <script type="module" src="/src/main.tsx"></script>
-    </body>
-  </html>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   
+  <!-- Título y descripción -->
+  <title>Master UCH - Natación</title>
+  <meta name="description" content="Aplicación de entrenamientos y gestión para el equipo de Natación Master de la Universidad de Chile">
+  
+  <!-- PWA Meta Tags -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0ea5e9">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Master UCH">
+  
+  <!-- Iconos -->
+  <link rel="icon" type="image/svg+xml" href="/icons/icon.svg">
+  <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.png">
+  <link rel="apple-touch-icon" sizes="167x167" href="/icons/icon-192x192.png">
+  
+  <!-- Microsoft Tiles -->
+  <meta name="msapplication-TileColor" content="#0ea5e9">
+  <meta name="msapplication-TileImage" content="/icons/icon-144x144.png">
+  
+  <!-- Optimización para móviles -->
+  <meta name="format-detection" content="telephone=no">
+  <meta name="HandheldFriendly" content="true">
+  
+  <!-- Splash Screens para iOS (opcional) -->
+  <link rel="apple-touch-startup-image" href="/icons/icon-512x512.png">
+  
+  <!-- Prevenir zoom en inputs en iOS -->
+  <style>
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="number"],
+    textarea,
+    select {
+      font-size: 16px !important;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <!-- Service Worker Registration -->
+  <script src="/sw-register.js"></script>
+  
+  <!-- React App -->
+  <script type="module" src="/src/main.tsx"></script>
+  
+  <noscript>
+    <div style="padding: 20px; text-align: center; font-family: Arial, sans-serif;">
+      <h1>🏊‍♂️ Master UCH - Natación</h1>
+      <p>Esta aplicación requiere JavaScript para funcionar.</p>
+      <p>Por favor, activa JavaScript en tu navegador.</p>
+    </div>
+  </noscript>
+</body>
+</html>

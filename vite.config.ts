@@ -16,4 +16,28 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  // Configuración para PWA
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets',
+    sourcemap: false,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'react-vendor': ['react', 'react-dom'],
+          'ui-vendor': ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu'],
+          'charts-vendor': ['recharts'],
+        },
+      },
+    },
+  },
+  // Optimización para producción
+  server: {
+    port: 3000,
+    strictPort: false,
+  },
+  preview: {
+    port: 4173,
+    strictPort: false,
+  },
 })

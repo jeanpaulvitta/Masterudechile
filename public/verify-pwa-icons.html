@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verificador de Íconos PWA - Master UCH</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #003366 0%, #00509e 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+    
+    h1 {
+      color: #003366;
+      margin-bottom: 10px;
+      font-size: 32px;
+      text-align: center;
+    }
+    
+    .subtitle {
+      color: #64748b;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    .btn {
+      background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      margin-bottom: 30px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(14, 165, 233, 0.4);
+    }
+    
+    .results {
+      margin-top: 30px;
+    }
+    
+    .icon-check {
+      background: #f8fafc;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 15px;
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      border: 2px solid #e2e8f0;
+      transition: all 0.3s;
+    }
+    
+    .icon-check.success {
+      background: #ecfdf5;
+      border-color: #10b981;
+    }
+    
+    .icon-check.error {
+      background: #fef2f2;
+      border-color: #ef4444;
+    }
+    
+    .icon-check.loading {
+      background: #fef3c7;
+      border-color: #f59e0b;
+    }
+    
+    .icon-preview {
+      width: 60px;
+      height: 60px;
+      border-radius: 10px;
+      object-fit: cover;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      flex-shrink: 0;
+    }
+    
+    .icon-preview.placeholder {
+      background: #e2e8f0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #94a3b8;
+      font-size: 24px;
+    }
+    
+    .icon-info {
+      flex: 1;
+    }
+    
+    .icon-name {
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 5px;
+    }
+    
+    .icon-status {
+      font-size: 14px;
+      color: #64748b;
+    }
+    
+    .icon-status.success {
+      color: #059669;
+    }
+    
+    .icon-status.error {
+      color: #dc2626;
+    }
+    
+    .icon-badge {
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    
+    .summary {
+      background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+      border: 2px solid #10b981;
+      border-radius: 15px;
+      padding: 25px;
+      margin-top: 30px;
+      text-align: center;
+    }
+    
+    .summary.incomplete {
+      background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+      border-color: #f59e0b;
+    }
+    
+    .summary h2 {
+      color: #065f46;
+      margin-bottom: 15px;
+      font-size: 24px;
+    }
+    
+    .summary.incomplete h2 {
+      color: #92400e;
+    }
+    
+    .summary p {
+      color: #047857;
+      line-height: 1.6;
+    }
+    
+    .summary.incomplete p {
+      color: #78350f;
+    }
+    
+    .progress-bar {
+      background: #e2e8f0;
+      height: 30px;
+      border-radius: 15px;
+      overflow: hidden;
+      margin: 20px 0;
+    }
+    
+    .progress-fill {
+      background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+      height: 100%;
+      transition: width 0.5s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    
+    .loading {
+      display: none;
+      text-align: center;
+      padding: 40px;
+      color: #64748b;
+    }
+    
+    .loading.show {
+      display: block;
+    }
+    
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #e2e8f0;
+      border-top-color: #0ea5e9;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 Verificador de Íconos PWA</h1>
+    <p class="subtitle">Comprueba que todos los íconos estén correctamente instalados</p>
+    
+    <button class="btn" onclick="checkIcons()">▶️ Verificar Íconos</button>
+    
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <p>Verificando íconos...</p>
+    </div>
+    
+    <div class="results" id="results"></div>
+    
+    <div id="summary"></div>
+  </div>
+
+  <script>
+    const requiredIcons = [
+      { size: 72, required: false },
+      { size: 96, required: false },
+      { size: 128, required: false },
+      { size: 144, required: false },
+      { size: 152, required: false },
+      { size: 192, required: true },
+      { size: 384, required: false },
+      { size: 512, required: true }
+    ];
+    
+    async function checkIcons() {
+      const resultsDiv = document.getElementById('results');
+      const summaryDiv = document.getElementById('summary');
+      const loadingDiv = document.getElementById('loading');
+      
+      resultsDiv.innerHTML = '';
+      summaryDiv.innerHTML = '';
+      loadingDiv.classList.add('show');
+      
+      let foundCount = 0;
+      let requiredFoundCount = 0;
+      let totalRequired = requiredIcons.filter(i => i.required).length;
+      
+      for (const icon of requiredIcons) {
+        const iconPath = `/icons/icon-${icon.size}x${icon.size}.png`;
+        const iconDiv = document.createElement('div');
+        iconDiv.className = 'icon-check loading';
+        
+        iconDiv.innerHTML = `
+          <div class="icon-preview placeholder">⏳</div>
+          <div class="icon-info">
+            <div class="icon-name">icon-${icon.size}x${icon.size}.png ${icon.required ? '⭐' : ''}</div>
+            <div class="icon-status">Verificando...</div>
+          </div>
+          <div class="icon-badge">⏳</div>
+        `;
+        
+        resultsDiv.appendChild(iconDiv);
+        
+        // Intentar cargar la imagen
+        try {
+          const exists = await checkImageExists(iconPath);
+          
+          if (exists) {
+            iconDiv.className = 'icon-check success';
+            iconDiv.innerHTML = `
+              <img src="${iconPath}" alt="${icon.size}x${icon.size}" class="icon-preview">
+              <div class="icon-info">
+                <div class="icon-name">icon-${icon.size}x${icon.size}.png ${icon.required ? '⭐' : ''}</div>
+                <div class="icon-status success">✓ Ícono encontrado y válido</div>
+              </div>
+              <div class="icon-badge" style="background: #10b981; color: white;">✓</div>
+            `;
+            foundCount++;
+            if (icon.required) requiredFoundCount++;
+          } else {
+            iconDiv.className = 'icon-check error';
+            iconDiv.innerHTML = `
+              <div class="icon-preview placeholder">❌</div>
+              <div class="icon-info">
+                <div class="icon-name">icon-${icon.size}x${icon.size}.png ${icon.required ? '⭐' : ''}</div>
+                <div class="icon-status error">✗ Ícono no encontrado ${icon.required ? '(OBLIGATORIO)' : ''}</div>
+              </div>
+              <div class="icon-badge" style="background: #ef4444; color: white;">✗</div>
+            `;
+          }
+        } catch (error) {
+          iconDiv.className = 'icon-check error';
+          iconDiv.innerHTML = `
+            <div class="icon-preview placeholder">❌</div>
+            <div class="icon-info">
+              <div class="icon-name">icon-${icon.size}x${icon.size}.png ${icon.required ? '⭐' : ''}</div>
+              <div class="icon-status error">✗ Error al verificar ${icon.required ? '(OBLIGATORIO)' : ''}</div>
+            </div>
+            <div class="icon-badge" style="background: #ef4444; color: white;">✗</div>
+          `;
+        }
+        
+        // Pequeña pausa para efecto visual
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+      
+      loadingDiv.classList.remove('show');
+      
+      // Mostrar resumen
+      const percentage = Math.round((foundCount / requiredIcons.length) * 100);
+      const allRequiredFound = requiredFoundCount === totalRequired;
+      
+      summaryDiv.innerHTML = `
+        <div class="summary ${allRequiredFound ? '' : 'incomplete'}">
+          <h2>${allRequiredFound ? '✅ ¡PWA Lista!' : '⚠️ PWA Incompleta'}</h2>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width: ${percentage}%">${percentage}%</div>
+          </div>
+          <p>
+            <strong>${foundCount} de ${requiredIcons.length}</strong> íconos encontrados<br>
+            <strong>${requiredFoundCount} de ${totalRequired}</strong> íconos obligatorios encontrados
+          </p>
+          ${allRequiredFound ? 
+            '<p style="margin-top: 15px; font-weight: 600;">🎉 Todos los íconos obligatorios están presentes. Tu PWA está lista para instalarse.</p>' : 
+            '<p style="margin-top: 15px; font-weight: 600;">⚠️ Faltan íconos obligatorios (192x192 y/o 512x512). Genera los íconos faltantes.</p>'
+          }
+          ${foundCount < requiredIcons.length ?
+            '<p style="margin-top: 15px;"><a href="/generate-pwa-icons.html" style="color: #0ea5e9; font-weight: 600;">→ Ir al Generador de Íconos</a></p>' :
+            ''
+          }
+        </div>
+      `;
+    }
+    
+    function checkImageExists(url) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(true);
+        img.onerror = () => resolve(false);
+        img.src = url + '?t=' + Date.now(); // Cache buster
+      });
+    }
+    
+    // Auto-verificar al cargar la página
+    window.addEventListener('load', () => {
+      setTimeout(checkIcons, 500);
+    });
+  </script>
+</body>
+</html>

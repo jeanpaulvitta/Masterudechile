@@ -4,25 +4,53 @@
 
 **¡Tu aplicación ahora es una PWA completa!** Los nadadores pueden instalarla en sus smartphones y usarla como una app nativa.
 
-### ⚡ Quick Start
+### ⚡ Quick Start - Completar Íconos PWA
 
 ```bash
-# 1. Generar íconos PNG (obligatorio)
-# Visita: https://realfavicongenerator.net/
-# Sube: /public/icons/icon.svg
-# Descarga y coloca los PNG en: /public/icons/
+# 1. Abrir el generador de íconos
+# Visita: http://localhost:5173/pwa-tools.html
+# O en producción: https://app-masteruchile.vercel.app/pwa-tools.html
 
-# 2. Desplegar
+# 2. Generar los 8 íconos PNG (2 minutos)
+# Sube una de las 4 imágenes del logo oficial (con la "U" roja)
+# Descarga los 8 archivos PNG generados automáticamente
+
+# 3. Guardar en el proyecto (1 minuto)
+# Arrastra los archivos a: /public/icons/
+
+# 4. Desplegar (2 minutos)
 git add .
-git commit -m "✨ PWA lista"
+git commit -m "🎨 Agregar íconos PWA oficiales Master UCH"
 git push origin main
 
-# 3. Verificar
+# 5. Verificar (después del deployment)
 # Abre: https://app-masteruchile.vercel.app/
 # Chrome DevTools → Lighthouse → PWA → Score > 90 ✅
+# O usa: /verify-pwa-icons.html
 ```
 
-📚 **Documentación completa:** Ver `QUICK_START_PWA.md`
+### 🛠️ Herramientas PWA Disponibles
+
+| Herramienta | Descripción |
+|------------|-------------|
+| `/pwa-tools.html` | 🎯 Centro de control con todas las herramientas |
+| `/generate-pwa-icons.html` | 🎨 Genera los 8 íconos PNG automáticamente |
+| `/verify-pwa-icons.html` | 🔍 Verifica que todos los íconos estén OK |
+| `/pwa-setup-instructions.html` | 📖 Instrucciones visuales paso a paso |
+
+### 📋 Estado Actual
+
+- ✅ PWA configurada (Service Worker, manifest.json)
+- ✅ Colores oficiales UCH (#003366) integrados
+- ✅ Meta tags para iOS y Android
+- ✅ Imágenes oficiales del logo recibidas
+- ⏳ **Pendiente:** Generar 8 archivos PNG (usa las herramientas arriba)
+
+📚 **Documentación completa:**
+- `RESUMEN-ICONOS.md` - Resumen ejecutivo (5 minutos)
+- `INSTRUCCIONES-ICONOS-PWA.md` - Guía detallada
+- `QUICK_START_PWA.md` - Guía técnica PWA
+- `GUIA_PWA_COMPLETA.md` - Documentación completa
 
 ---
 

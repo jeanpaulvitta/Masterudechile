@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Instrucciones PWA - Master UCH</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #003366 0%, #00509e 100%);
+      min-height: 100vh;
+      padding: 40px 20px;
+    }
+    
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      text-align: center;
+      color: white;
+      margin-bottom: 40px;
+    }
+    
+    .header h1 {
+      font-size: 42px;
+      margin-bottom: 10px;
+    }
+    
+    .header .subtitle {
+      font-size: 18px;
+      opacity: 0.9;
+    }
+    
+    .card {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      margin-bottom: 30px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    }
+    
+    .status-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+    
+    .status-item {
+      background: #f8fafc;
+      border-radius: 15px;
+      padding: 25px;
+      border-left: 5px solid #cbd5e1;
+    }
+    
+    .status-item.completed {
+      border-left-color: #10b981;
+      background: #ecfdf5;
+    }
+    
+    .status-item.pending {
+      border-left-color: #f59e0b;
+      background: #fffbeb;
+    }
+    
+    .status-item h3 {
+      color: #1e293b;
+      font-size: 18px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .status-item p {
+      color: #64748b;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    
+    .step {
+      margin-bottom: 30px;
+      padding-bottom: 30px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+    
+    .step:last-child {
+      border-bottom: none;
+    }
+    
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .step-number {
+      width: 50px;
+      height: 50px;
+      background: linear-gradient(135deg, #003366 0%, #0284c7 100%);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+    
+    .step-title {
+      font-size: 22px;
+      color: #1e293b;
+      font-weight: 600;
+    }
+    
+    .step-content {
+      padding-left: 65px;
+    }
+    
+    .step-content p {
+      color: #475569;
+      line-height: 1.8;
+      margin-bottom: 15px;
+    }
+    
+    .code-block {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 20px;
+      border-radius: 10px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      margin: 15px 0;
+      overflow-x: auto;
+    }
+    
+    .btn {
+      display: inline-block;
+      background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+      color: white;
+      padding: 15px 30px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      margin: 10px 10px 10px 0;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(14, 165, 233, 0.4);
+    }
+    
+    .btn-secondary {
+      background: #64748b;
+    }
+    
+    .btn-success {
+      background: #10b981;
+    }
+    
+    .alert {
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 20px;
+      border-radius: 10px;
+      margin: 20px 0;
+    }
+    
+    .alert-title {
+      color: #92400e;
+      font-weight: 600;
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+    
+    .alert p {
+      color: #78350f;
+      line-height: 1.6;
+    }
+    
+    .file-list {
+      background: #f1f5f9;
+      padding: 20px;
+      border-radius: 10px;
+      margin: 15px 0;
+    }
+    
+    .file-list ul {
+      list-style: none;
+      padding-left: 10px;
+    }
+    
+    .file-list li {
+      color: #475569;
+      padding: 8px 0;
+      border-bottom: 1px solid #e2e8f0;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+    }
+    
+    .file-list li:last-child {
+      border-bottom: none;
+    }
+    
+    .file-list li::before {
+      content: "📄 ";
+      margin-right: 8px;
+    }
+    
+    .highlight {
+      background: #fef3c7;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🏊‍♂️ Configuración PWA</h1>
+      <p class="subtitle">Master UCH - Natación</p>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-bottom: 30px; color: #1e293b;">📊 Estado del Proyecto</h2>
+      
+      <div class="status-grid">
+        <div class="status-item completed">
+          <h3>✅ PWA Configurada</h3>
+          <p>Service Worker, manifest.json y componentes React listos</p>
+        </div>
+        
+        <div class="status-item completed">
+          <h3>✅ Colores Actualizados</h3>
+          <p>Tema azul UCH (#003366) integrado en la app</p>
+        </div>
+        
+        <div class="status-item completed">
+          <h3>✅ Logos Oficiales Recibidos</h3>
+          <p>Imágenes con la "U" roja y fondo azul disponibles</p>
+        </div>
+        
+        <div class="status-item pending">
+          <h3>⏳ Íconos PNG Pendientes</h3>
+          <p>Necesitas generar los 8 tamaños PNG para completar la PWA</p>
+        </div>
+      </div>
+
+      <div class="alert">
+        <div class="alert-title">⚠️ Paso Final Requerido</div>
+        <p>La PWA está técnicamente lista, pero <strong>necesita los íconos PNG</strong> en todos los tamaños para que los usuarios puedan instalarla en sus smartphones como una app nativa.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-bottom: 30px; color: #1e293b;">📝 Instrucciones Paso a Paso</h2>
+
+      <div class="step">
+        <div class="step-header">
+          <div class="step-number">1</div>
+          <div class="step-title">Generar Íconos PNG</div>
+        </div>
+        <div class="step-content">
+          <p>Tienes 3 opciones para generar los íconos en todos los tamaños necesarios:</p>
+          
+          <p><strong>Opción A: Generador Integrado (Más Fácil)</strong></p>
+          <a href="/generate-pwa-icons.html" class="btn" target="_blank">🎨 Abrir Generador de Íconos</a>
+          <p style="margin-top: 15px;">Sube una de tus imágenes del logo oficial, se generarán automáticamente todos los tamaños, y descárgalos con un clic.</p>
+          
+          <p style="margin-top: 20px;"><strong>Opción B: RealFaviconGenerator (Online)</strong></p>
+          <a href="https://realfavicongenerator.net/" class="btn btn-secondary" target="_blank">🌐 Ir a RealFaviconGenerator</a>
+          <p style="margin-top: 15px;">Sube la imagen más grande que tengas (512x512 preferiblemente) y descarga el paquete completo.</p>
+          
+          <p style="margin-top: 20px;"><strong>Opción C: Manualmente con Canva/Photoshop</strong></p>
+          <p>Exporta la imagen en cada uno de estos tamaños: 72, 96, 128, 144, 152, 192, 384, 512</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-header">
+          <div class="step-number">2</div>
+          <div class="step-title">Renombrar Archivos</div>
+        </div>
+        <div class="step-content">
+          <p>Los archivos PNG deben tener exactamente estos nombres:</p>
+          <div class="file-list">
+            <ul>
+              <li>icon-72x72.png</li>
+              <li>icon-96x96.png</li>
+              <li>icon-128x128.png</li>
+              <li>icon-144x144.png</li>
+              <li>icon-152x152.png</li>
+              <li>icon-192x192.png <span class="highlight">⭐ OBLIGATORIO</span></li>
+              <li>icon-384x384.png</li>
+              <li>icon-512x512.png <span class="highlight">⭐ OBLIGATORIO</span></li>
+            </ul>
+          </div>
+          <p>Los tamaños <strong>192x192</strong> y <strong>512x512</strong> son obligatorios para que la PWA funcione.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-header">
+          <div class="step-number">3</div>
+          <div class="step-title">Guardar en el Proyecto</div>
+        </div>
+        <div class="step-content">
+          <p>Coloca todos los archivos PNG en la carpeta:</p>
+          <div class="code-block">/public/icons/</div>
+          <p>Puedes arrastrar y soltar los archivos directamente en tu editor de código (VS Code, etc.)</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-header">
+          <div class="step-number">4</div>
+          <div class="step-title">Hacer Commit y Push</div>
+        </div>
+        <div class="step-content">
+          <p>Una vez que todos los archivos PNG estén en la carpeta, sube los cambios a Git:</p>
+          
+          <p><strong>Opción A: Terminal</strong></p>
+          <div class="code-block">git add .<br>git commit -m "🎨 Agregar íconos PWA oficiales"<br>git push</div>
+          
+          <p><strong>Opción B: VS Code</strong></p>
+          <p>1. Abre el panel "Source Control" (Ctrl+Shift+G)<br>
+          2. Haz clic en el "+" para agregar los cambios<br>
+          3. Escribe el mensaje: <code>🎨 Agregar íconos PWA oficiales</code><br>
+          4. Haz clic en "Commit" y luego "Sync Changes"</p>
+          
+          <p><strong>Opción C: GitHub Desktop</strong></p>
+          <p>1. Abre GitHub Desktop<br>
+          2. Verás los archivos nuevos en la lista<br>
+          3. Escribe el mensaje de commit<br>
+          4. Haz clic en "Commit to main" y luego "Push origin"</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-header">
+          <div class="step-number">5</div>
+          <div class="step-title">Verificar en Vercel</div>
+        </div>
+        <div class="step-content">
+          <p>Después del push, Vercel desplegará automáticamente los cambios:</p>
+          <p>✅ El deployment toma 1-2 minutos<br>
+          ✅ Recibirás una notificación cuando termine<br>
+          ✅ Los íconos estarán disponibles en producción</p>
+          <a href="https://app-masteruchile.vercel.app/" class="btn btn-success" target="_blank">🚀 Ver App en Producción</a>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-header">
+          <div class="step-number">6</div>
+          <div class="step-title">Probar la Instalación</div>
+        </div>
+        <div class="step-content">
+          <p>Una vez desplegado, prueba instalar la PWA:</p>
+          
+          <p><strong>En Android (Chrome):</strong></p>
+          <p>1. Abre la app en Chrome<br>
+          2. Toca el menú (⋮) → "Instalar app" o "Agregar a pantalla de inicio"<br>
+          3. Verás el ícono oficial con la "U" roja<br>
+          4. ¡Listo! Ya tienes la app instalada</p>
+          
+          <p><strong>En iPhone (Safari):</strong></p>
+          <p>1. Abre la app en Safari<br>
+          2. Toca el botón de compartir (□↑)<br>
+          3. Selecciona "Agregar a inicio"<br>
+          4. El ícono aparecerá en tu pantalla de inicio</p>
+          
+          <p><strong>En Desktop:</strong></p>
+          <p>1. Abre la app en Chrome/Edge<br>
+          2. Verás un ícono de instalación (⊕) en la barra de direcciones<br>
+          3. Haz clic para instalar<br>
+          4. La app se abrirá en su propia ventana</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin-bottom: 20px; color: #1e293b;">🎯 Checklist Final</h2>
+      <div style="background: #f8fafc; padding: 25px; border-radius: 10px;">
+        <p style="color: #475569; margin-bottom: 15px;">Marca cada ítem cuando lo completes:</p>
+        <label style="display: block; margin-bottom: 12px; color: #1e293b; cursor: pointer;">
+          <input type="checkbox"> Generar 8 archivos PNG con los tamaños correctos
+        </label>
+        <label style="display: block; margin-bottom: 12px; color: #1e293b; cursor: pointer;">
+          <input type="checkbox"> Renombrar archivos con el formato icon-{size}x{size}.png
+        </label>
+        <label style="display: block; margin-bottom: 12px; color: #1e293b; cursor: pointer;">
+          <input type="checkbox"> Guardar todos los archivos en /public/icons/
+        </label>
+        <label style="display: block; margin-bottom: 12px; color: #1e293b; cursor: pointer;">
+          <input type="checkbox"> Hacer commit con mensaje descriptivo
+        </label>
+        <label style="display: block; margin-bottom: 12px; color: #1e293b; cursor: pointer;">
+          <input type="checkbox"> Push a GitHub/GitLab
+        </label>
+        <label style="display: block; margin-bottom: 12px; color: #1e293b; cursor: pointer;">
+          <input type="checkbox"> Esperar deployment en Vercel (1-2 min)
+        </label>
+        <label style="display: block; margin-bottom: 12px; color: #1e293b; cursor: pointer;">
+          <input type="checkbox"> Probar instalación en smartphone
+        </label>
+        <label style="display: block; color: #1e293b; cursor: pointer;">
+          <input type="checkbox"> <strong>¡Celebrar! 🎉 Tu PWA está completa</strong>
+        </label>
+      </div>
+    </div>
+
+    <div class="card" style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border: 2px solid #10b981;">
+      <h2 style="margin-bottom: 20px; color: #065f46;">💡 Recursos Útiles</h2>
+      <div style="display: grid; gap: 10px;">
+        <a href="/generate-pwa-icons.html" class="btn" target="_blank">🎨 Generador de Íconos Integrado</a>
+        <a href="/icons/README.md" class="btn btn-secondary" target="_blank">📖 Documentación Completa</a>
+        <a href="https://realfavicongenerator.net/" class="btn btn-secondary" target="_blank">🌐 RealFaviconGenerator</a>
+        <a href="https://app-masteruchile.vercel.app/" class="btn btn-success" target="_blank">🚀 Ver App en Producción</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

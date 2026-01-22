@@ -23,7 +23,7 @@ interface TrainingVolumeChartsProps {
 
 export function TrainingVolumeCharts({ sessions }: TrainingVolumeChartsProps) {
   // Calcular volúmenes e intensidades por mesociclo
-  const mesocicloData = ['Base', 'Desarrollo', 'Pre-competitivo', 'Competitivo'].map(mesociclo => {
+  const mesocicloData = ['Mantenimiento', 'Base', 'Desarrollo', 'Pre-competitivo', 'Competitivo'].map(mesociclo => {
     const mesocicloSessions = sessions.filter(s => s.mesociclo === mesociclo);
     
     const intensityVolumes: { [key: string]: number } = {

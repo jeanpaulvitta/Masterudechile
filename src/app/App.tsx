@@ -1,4 +1,8 @@
 // Main application component with authentication
+import * as api from "./services/api";
+import { syncWorkoutsFromLocal } from "./handlers/syncWorkouts";
+import { isTeamRecord } from "./utils/recordsUtils";
+import { calculateAge, calculateMasterCategory } from "./utils/swimmerUtils";
 import { useState, useEffect } from "react";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
@@ -9,7 +13,7 @@ import { Badge } from "./components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./components/ui/dialog";
 import { Input } from "./components/ui/input";
 import { Label } from "./components/ui/label";
-import { Users, Calendar, Trophy, Medal, Flag, UserPlus, Filter, Dumbbell, Crown, ClipboardList, Target, TrendingUp, CalendarDays, FileDown, Award, Clipboard, Shield, Waves, Settings, ImageIcon } from "lucide-react";
+import { Users, Calendar, Trophy, Medal, Flag, UserPlus, Filter, Dumbbell, Crown, ClipboardList, Target, TrendingUp, CalendarDays, FileDown, Award, Clipboard, Shield, Waves, Settings, ImageIcon, Activity } from "lucide-react";
 import { SwimmerDetailsDialog } from "./components/SwimmerDetailsDialog";
 import { AddSwimmerDialog } from "./components/AddSwimmerDialog";
 import { MesocicloCalendar } from "./components/MesocicloCalendar";
@@ -27,8 +31,7 @@ import { IntegratedCalendar } from "./components/IntegratedCalendar";
 import { SwimmerListItem } from "./components/SwimmerListItem";
 import { CompetitionResults } from "./components/CompetitionResults";
 import { UserMenu } from "./components/UserMenu";
-import { WorkoutManager } from "./components/WorkoutManager";
-import { ChallengeManager } from "./components/ChallengeManager";
+import { UnifiedCalendarManager } from "./components/UnifiedCalendarManager";
 import { HolidayManager } from "./components/HolidayManager";
 import { TrashManager } from "./components/TrashManager";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -44,9 +47,8 @@ import type { TestControl, TestResult } from "./data/testControl";
 import { workouts as defaultWorkouts } from "./data/workouts";
 import { challenges as defaultChallenges } from "./data/challenges";
 import { generateAllSwimmersPDF } from "./utils/pdfGenerator";
-import * as api from "./services/api";
-import { isTeamRecord } from "./utils/recordsUtils";
-import { calculateAge, calculateMasterCategory } from "./utils/swimmerUtils";
+import { syncFebruaryWorkouts } from "./handlers/syncFebruaryWorkouts";
+import { cleanFebruaryWorkouts } from "./handlers/cleanFebruaryWorkouts";
 
 // Función auxiliar para convertir tiempo MM:SS.SS a segundos
 function timeToSeconds(time: string): number {
@@ -208,7 +210,14 @@ function MainApp() {
   const handleSavePersonalBests = async (swimmerId: string, personalBests: PersonalBest[], history: PersonalBestHistory[]) => {
     try {
       const swimmer = swimmers.find(s => s.id === swimmerId);
-      if (!swimmer) return;
+      if (!swimmer) {
+        console.error("❌ Nadador no encontrado:", swimmerId);
+        return;
+      }
+
+      console.log(`🏊 Guardando marcas para nadador: ${swimmer.name} (${swimmerId})`);
+      console.log(`📊 Marcas personales a guardar:`, personalBests.length, personalBests);
+      console.log(`📈 Historial a agregar:`, history.length, history);
 
       // Convertir tiempo a segundos para cada entrada del historial
       const processedHistory = history.map(h => ({
@@ -220,11 +229,21 @@ function MainApp() {
       const existingHistory = swimmer.personalBestsHistory || [];
       const updatedHistory = [...existingHistory, ...processedHistory];
 
+      console.log(`📚 Historial existente:`, existingHistory.length);
+      console.log(`📚 Historial actualizado:`, updatedHistory.length);
+
       const updatedSwimmer = { 
         ...swimmer, 
         personalBests,
         personalBestsHistory: updatedHistory
       };
+      
+      console.log(`💾 Llamando a api.updateSwimmer con:`, {
+        id: swimmerId,
+        personalBestsCount: updatedSwimmer.personalBests?.length,
+        historyCount: updatedSwimmer.personalBestsHistory?.length
+      });
+      
       await api.updateSwimmer(swimmerId, updatedSwimmer);
       
       // Actualizar la lista de nadadores
@@ -236,12 +255,12 @@ function MainApp() {
         setSelectedSwimmer({ ...selectedSwimmer, personalBests, personalBestsHistory: updatedHistory });
       }
       
-      console.log("✅ Mejores marcas guardadas:", personalBests);
+      console.log("✅ Mejores marcas guardadas exitosamente");
       alert("✅ Mejores marcas guardadas exitosamente");
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Error desconocido";
-      alert(`Error al guardar mejores marcas: ${errorMsg}`);
       console.error("❌ Error al guardar mejores marcas:", err);
+      alert(`Error al guardar mejores marcas: ${errorMsg}`);
     }
   };
 
@@ -435,6 +454,12 @@ function MainApp() {
       console.error("❌ Error al eliminar entrenamiento:", err);
     }
   };
+
+  const handleSyncFromLocal = () => syncWorkoutsFromLocal(workouts, setWorkouts);
+
+  const handleSyncFebruary = () => syncFebruaryWorkouts(workouts, setWorkouts);
+
+  const handleCleanFebruary = () => cleanFebruaryWorkouts(workouts, setWorkouts);
 
   // Funciones para gestionar desafíos
   const handleAddChallenge = async (challenge: Omit<Challenge, "id">) => {
@@ -795,6 +820,13 @@ function MainApp() {
 
   const mesocicloStats = [
     {
+      name: "Mantenimiento",
+      weeks: 4,
+      description: "Periodo de acondicionamiento previo al inicio de temporada",
+      icon: Activity,
+      color: "text-green-600",
+    },
+    {
       name: "Base",
       weeks: 5,
       description: "Construcción de resistencia aeróbica",
@@ -928,20 +960,18 @@ function MainApp() {
             {/* Gestión de Entrenamientos y Desafíos (solo para admins/coaches) */}
             {(user?.role === "admin" || user?.role === "coach") && (
               <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <WorkoutManager
-                    workouts={workouts}
-                    onAddWorkout={handleAddWorkout}
-                    onEditWorkout={handleEditWorkout}
-                    onDeleteWorkout={handleDeleteWorkout}
-                  />
-                  <ChallengeManager
-                    challenges={challenges}
-                    onAddChallenge={handleAddChallenge}
-                    onEditChallenge={handleEditChallenge}
-                    onDeleteChallenge={handleDeleteChallenge}
-                  />
-                </div>
+                {/* Calendario Unificado de Entrenamientos y Desafíos */}
+                <UnifiedCalendarManager
+                  workouts={workouts}
+                  challenges={challenges}
+                  onAddWorkout={handleAddWorkout}
+                  onEditWorkout={handleEditWorkout}
+                  onDeleteWorkout={handleDeleteWorkout}
+                  onAddChallenge={handleAddChallenge}
+                  onEditChallenge={handleEditChallenge}
+                  onDeleteChallenge={handleDeleteChallenge}
+                  onSyncFromLocal={handleSyncFromLocal}
+                />
 
                 {/* Gestión de Días Feriados */}
                 <HolidayManager

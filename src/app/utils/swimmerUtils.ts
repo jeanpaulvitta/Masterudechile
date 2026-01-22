@@ -6,13 +6,9 @@
 export function calculateAge(dateOfBirth: string): number {
   const today = new Date();
   const birthDate = new Date(dateOfBirth);
-  let age = today.getFullYear() - birthDate.getFullYear();
-  const monthDiff = today.getMonth() - birthDate.getMonth();
   
-  // Si aún no ha cumplido años este año, restar 1
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age--;
-  }
+  // Calcular edad basándose solo en el año de nacimiento
+  const age = today.getFullYear() - birthDate.getFullYear();
   
   return age;
 }

@@ -19,6 +19,234 @@ export interface Workout {
 
 // 60 Entrenamientos regulares (Lunes, Miércoles, Viernes) - 3 por semana x 20 semanas
 export const workouts: Workout[] = [
+  // PERIODO DE MANTENIMIENTO - FEBRERO (Semanas -4 a -1)
+  // Semana -4 (2, 4, 6 de febrero)
+  {
+    week: -4,
+    date: "2 de febrero",
+    day: "Lunes",
+    schedule: "AM",
+    mesociclo: "Mantenimiento",
+    distance: 2000,
+    duration: 65,
+    warmup: "300m estilo libre suave + 200m técnica de crol con aletas",
+    mainSet: [
+      "4 x 100m con paletas (descanso 30s)",
+      "4 x 75m con pull buoy ritmo moderado (descanso 20s)",
+      "6 x 50m patada con aletas (descanso 15s)",
+      "200m técnica brazada"
+    ],
+    cooldown: "200m estilo libre suave",
+    intensity: "Baja"
+  },
+  {
+    week: -4,
+    date: "4 de febrero",
+    day: "Miércoles",
+    schedule: "AM",
+    mesociclo: "Mantenimiento",
+    distance: 2000,
+    duration: 65,
+    warmup: "400m variado (100m libre + 100m espalda + 100m pecho + 100m libre con aletas)",
+    mainSet: [
+      "300m pull buoy continuo ritmo suave",
+      "8 x 50m con paletas aumentando velocidad (descanso 20s)",
+      "4 x 100m patada con aletas (descanso 25s)",
+      "200m técnica"
+    ],
+    cooldown: "200m estilo libre suave",
+    intensity: "Baja"
+  },
+  {
+    week: -4,
+    date: "6 de febrero",
+    day: "Viernes",
+    schedule: "AM",
+    mesociclo: "Mantenimiento",
+    distance: 2000,
+    duration: 65,
+    warmup: "300m libre + 200m ejercicios técnicos",
+    mainSet: [
+      "3 x 200m con pull buoy (descanso 30s)",
+      "6 x 75m con paletas (descanso 20s)",
+      "8 x 50m patada con aletas ritmo fuerte (descanso 15s)",
+      "150m recuperación"
+    ],
+    cooldown: "200m estilo libre suave",
+    intensity: "Media"
+  },
+
+  // Semana -3 (9, 11, 13 de febrero)
+  {
+    week: -3,
+    date: "9 de febrero",
+    day: "Lunes",
+    schedule: "AM",
+    mesociclo: "Mantenimiento",
+    distance: 2000,
+    duration: 65,
+    warmup: "400m (200m libre + 200m técnica con aletas)",
+    mainSet: [
+      "400m pull buoy continuo ritmo moderado",
+      "6 x 100m con paletas (descanso 25s)",
+      "8 x 50m patada con aletas (descanso 15s)",
+      "200m técnica brazada"
+    ],
+    cooldown: "200m estilo libre suave",
+    intensity: "Baja"
+  },
+  {
+    week: -3,
+    date: "11 de febrero",
+    day: "Miércoles",
+    schedule: "AM",
+    mesociclo: "Mantenimiento",
+    distance: 2000,
+    duration: 65,
+    warmup: "300m libre + 200m ejercicios con aletas",
+    mainSet: [
+      "4 x 150m con pull buoy (descanso 30s)",
+      "8 x 75m con paletas ritmo progresivo (descanso 20s)",
+      "6 x 50m patada con aletas fuerte (descanso 15s)",
+      "150m suave"
+    ],
+    cooldown: "200m estilo libre suave",
+    intensity: "Media"
+  },
+  {
+    week: -3,
+    date: "13 de febrero",
+    day: "Viernes",
+    schedule: "AM",
+    mesociclo: "Mantenimiento",
+    distance: 2000,
+    duration: 65,
+    warmup: "400m variado con aletas",
+    mainSet: [
+      "300m pull buoy continuo",
+      "10 x 50m con paletas (descanso 15s)",
+      "4 x 100m patada con aletas (descanso 25s)",
+      "6 x 50m técnica (descanso 20s)",
+      "150m recuperación"
+    ],
+    cooldown: "200m estilo libre suave",
+    intensity: "Baja"
+  },
+
+  // Semana -2 (16, 18, 20 de febrero)
+  {
+    week: -2,
+    date: "16 de febrero",
+    day: "Lunes",
+    schedule: "AM",
+    mesociclo: "Mantenimiento",
+    distance: 2000,
+    duration: 65,
+    warmup: "300m libre + 200m técnica alternando con aletas",
+    mainSet: [
+      "5 x 100m con paletas (descanso 25s)",
+      "300m pull buoy ritmo continuo",
+      "8 x 50m patada con aletas fuerte (descanso 15s)",
+      "4 x 75m técnica (descanso 20s)",
+      "150m suave"
+    ],
+    cooldown: "200m estilo libre suave",
+    intensity: "Media"
+  },
+  {
+    week: -2,
+    date: "18 de febrero",
+    day: "Miércoles",
+    schedule: "AM",
+    mesociclo: "Mantenimiento",
+    distance: 2000,
+    duration: 65,
+    warmup: "400m (200m libre + 200m con aletas)",
+    mainSet: [
+      "4 x 150m pull buoy aumentando ritmo (descanso 30s)",
+      "6 x 100m con paletas (descanso 25s)",
+      "6 x 50m patada con aletas sprint (descanso 15s)",
+      "200m técnica"
+    ],
+    cooldown: "200m estilo libre suave",
+    intensity: "Media"
+  },
+  {
+    week: -2,
+    date: "20 de febrero",
+    day: "Viernes",
+    schedule: "AM",
+    mesociclo: "Mantenimiento",
+    distance: 2000,
+    duration: 65,
+    warmup: "300m libre + 200m ejercicios técnicos",
+    mainSet: [
+      "400m pull buoy ritmo moderado continuo",
+      "8 x 75m con paletas progresivo (descanso 20s)",
+      "8 x 50m patada con aletas (descanso 15s)",
+      "200m recuperación"
+    ],
+    cooldown: "200m estilo libre suave",
+    intensity: "Baja"
+  },
+
+  // Semana -1 (23, 25, 27 de febrero)
+  {
+    week: -1,
+    date: "23 de febrero",
+    day: "Lunes",
+    schedule: "AM",
+    mesociclo: "Mantenimiento",
+    distance: 2000,
+    duration: 65,
+    warmup: "400m variado con aletas (100m cada estilo)",
+    mainSet: [
+      "3 x 200m con pull buoy (descanso 30s)",
+      "6 x 100m con paletas ritmo fuerte (descanso 25s)",
+      "6 x 50m patada con aletas máxima velocidad (descanso 15s)",
+      "150m técnica"
+    ],
+    cooldown: "200m estilo libre suave",
+    intensity: "Media"
+  },
+  {
+    week: -1,
+    date: "25 de febrero",
+    day: "Miércoles",
+    schedule: "AM",
+    mesociclo: "Mantenimiento",
+    distance: 2000,
+    duration: 65,
+    warmup: "300m libre + 200m técnica con aletas",
+    mainSet: [
+      "300m pull buoy continuo ritmo moderado",
+      "10 x 50m con paletas (descanso 15s)",
+      "4 x 100m patada con aletas (descanso 25s)",
+      "8 x 50m brazada perfecta (descanso 20s)",
+      "200m suave"
+    ],
+    cooldown: "200m estilo libre suave",
+    intensity: "Baja"
+  },
+  {
+    week: -1,
+    date: "27 de febrero",
+    day: "Viernes",
+    schedule: "AM",
+    mesociclo: "Mantenimiento",
+    distance: 2000,
+    duration: 65,
+    warmup: "400m (200m libre + 100m con aletas + 100m técnica)",
+    mainSet: [
+      "4 x 150m pull buoy ritmo progresivo (descanso 30s)",
+      "6 x 100m con paletas (descanso 25s)",
+      "8 x 50m patada con aletas (descanso 15s)",
+      "200m recuperación técnica"
+    ],
+    cooldown: "200m estilo libre suave",
+    intensity: "Media"
+  },
+
   // MESOCICLO 1: BASE (2 marzo - 6 abril) - 5 semanas
   // Semana 1
   {

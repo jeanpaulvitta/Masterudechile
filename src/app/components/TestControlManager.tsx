@@ -55,7 +55,7 @@ interface TestControlManagerProps {
 
 const styles = ["Libre/Crol", "Espalda", "Pecho", "Mariposa", "Combinado"];
 const commonDistances = [25, 50, 100, 200, 400, 800, 1000, 1500, 2000];
-const mesociclos = ["Base", "Desarrollo", "Pre-competitivo", "Competitivo"];
+const mesociclos = ["Mantenimiento", "Base", "Desarrollo", "Pre-competitivo", "Competitivo"];
 
 // Plantillas de tests predefinidos
 const testTemplates = [

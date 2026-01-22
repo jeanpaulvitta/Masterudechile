@@ -1,5 +1,9 @@
 @custom-variant dark (&:is(.dark *));
 
+/* Custom breakpoint for extra small screens */
+@custom-media --xs (min-width: 475px);
+@custom-variant xs (media(--xs));
+
 :root {
   --font-size: 16px;
   --background: #ffffff;

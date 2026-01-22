@@ -8,6 +8,7 @@ import { Badge } from "./ui/badge";
 import { Trophy, Plus, Trash2, Award, Crown } from "lucide-react";
 import type { PersonalBest, PersonalBestHistory, Swimmer } from "../data/swimmers";
 import { isTeamRecord } from "../utils/recordsUtils";
+import { TimeInput } from "./TimeInput";
 
 interface PersonalBestsDialogProps {
   swimmerId: string;
@@ -239,14 +240,12 @@ export function PersonalBestsDialog({ swimmerId, swimmerName, swimmer, allSwimme
                 </Select>
               </div>
 
-              <div>
-                <Label className="text-xs">Tiempo (MM:SS.SS)</Label>
-                <Input
-                  type="text"
-                  placeholder="01:23.45"
-                  value={newBest.time}
-                  onChange={(e) => setNewBest({ ...newBest, time: e.target.value })}
-                  className="mt-1"
+              <div className="md:col-span-3">
+                <TimeInput
+                  value={newBest.time || ""}
+                  onChange={(time) => setNewBest({ ...newBest, time })}
+                  distance={newBest.distance}
+                  style={newBest.style}
                 />
               </div>
 

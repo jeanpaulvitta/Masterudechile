@@ -12,6 +12,16 @@ const supabaseAdmin = createClient(
   Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
 );
 
+// Helper function to add timeout to promises
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessage: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => 
+      setTimeout(() => reject(new Error(errorMessage)), timeoutMs)
+    )
+  ]);
+}
+
 // Enable logger
 app.use('*', logger(console.log));
 
@@ -26,6 +36,40 @@ app.use(
     maxAge: 600,
   }),
 );
+
+// Middleware to catch early errors
+app.use('*', async (c, next) => {
+  try {
+    await next();
+  } catch (error) {
+    console.error('❌ Middleware caught error:', error);
+    return c.json({
+      error: 'Request processing error',
+      message: error instanceof Error ? error.message : String(error)
+    }, 500);
+  }
+});
+
+// Global error handler
+app.onError((err, c) => {
+  console.error('❌ Global error handler caught:', err);
+  console.error('Error stack:', err.stack);
+  
+  return c.json({
+    error: 'Internal server error',
+    message: err.message,
+    details: String(err)
+  }, 500);
+});
+
+// Not found handler
+app.notFound((c) => {
+  console.log('❌ 404 Not Found:', c.req.url);
+  return c.json({
+    error: 'Not Found',
+    message: `Route ${c.req.method} ${c.req.url} not found`
+  }, 404);
+});
 
 // Health check endpoint
 app.get("/make-server-000a47d9/health", (c) => {
@@ -47,12 +91,50 @@ app.get("/make-server-000a47d9/debug/test-controls", async (c) => {
   }
 });
 
+// Debug endpoint to check specific swimmer data
+app.get("/make-server-000a47d9/debug/swimmer/:id", async (c) => {
+  try {
+    const id = c.req.param("id");
+    const swimmers = await kv.get("swimmers:list") || [];
+    const swimmer = swimmers.find((s: any) => s.id === id);
+    
+    if (!swimmer) {
+      return c.json({ error: "Swimmer not found", id }, 404);
+    }
+    
+    return c.json({ 
+      swimmer: {
+        id: swimmer.id,
+        name: swimmer.name,
+        email: swimmer.email,
+        hasPersonalBests: !!swimmer.personalBests,
+        personalBestsCount: swimmer.personalBests?.length || 0,
+        personalBests: swimmer.personalBests || [],
+        hasPersonalBestsHistory: !!swimmer.personalBestsHistory,
+        personalBestsHistoryCount: swimmer.personalBestsHistory?.length || 0,
+        personalBestsHistory: swimmer.personalBestsHistory || [],
+        hasGoals: !!swimmer.goals,
+        goalsCount: swimmer.goals?.length || 0,
+        goals: swimmer.goals || []
+      }
+    });
+  } catch (error) {
+    console.error("Error in debug swimmer endpoint:", error);
+    return c.json({ error: String(error) }, 500);
+  }
+});
+
 // ==================== SWIMMERS ROUTES ====================
 
 // Get all swimmers
 app.get("/make-server-000a47d9/swimmers", async (c) => {
   try {
-    const swimmers = await kv.get("swimmers:list");
+    const swimmersPromise = kv.get("swimmers:list");
+    const swimmers = await withTimeout(
+      swimmersPromise,
+      10000,
+      'Timeout fetching swimmers'
+    );
     return c.json({ swimmers: swimmers || [] });
   } catch (error) {
     console.error("Error fetching swimmers:", error);
@@ -86,15 +168,38 @@ app.put("/make-server-000a47d9/swimmers/:id", async (c) => {
   try {
     const id = c.req.param("id");
     const updatedData = await c.req.json();
+    
+    console.log(`📝 Actualizando nadador ${id}`);
+    console.log(`📊 Datos recibidos:`, {
+      hasPersonalBests: !!updatedData.personalBests,
+      personalBestsCount: updatedData.personalBests?.length || 0,
+      hasPersonalBestsHistory: !!updatedData.personalBestsHistory,
+      historyCount: updatedData.personalBestsHistory?.length || 0,
+      hasGoals: !!updatedData.goals,
+      goalsCount: updatedData.goals?.length || 0
+    });
+    
     const swimmers = await kv.get("swimmers:list") || [];
     
     const index = swimmers.findIndex((s: any) => s.id === id);
     if (index === -1) {
+      console.error(`❌ Nadador ${id} no encontrado`);
       return c.json({ error: "Swimmer not found" }, 404);
     }
     
-    swimmers[index] = { ...updatedData, id };
+    // Preservar datos existentes que no vienen en updatedData
+    const currentSwimmer = swimmers[index];
+    swimmers[index] = { ...currentSwimmer, ...updatedData, id };
+    
     await kv.set("swimmers:list", swimmers);
+    
+    console.log(`✅ Nadador ${id} actualizado exitosamente`);
+    console.log(`📊 Datos guardados:`, {
+      hasPersonalBests: !!swimmers[index].personalBests,
+      personalBestsCount: swimmers[index].personalBests?.length || 0,
+      hasPersonalBestsHistory: !!swimmers[index].personalBestsHistory,
+      historyCount: swimmers[index].personalBestsHistory?.length || 0
+    });
     
     return c.json({ swimmer: swimmers[index] });
   } catch (error) {
@@ -107,7 +212,8 @@ app.put("/make-server-000a47d9/swimmers/:id", async (c) => {
 app.delete("/make-server-000a47d9/swimmers/:id", async (c) => {
   try {
     const id = c.req.param("id");
-    const swimmers = await kv.get("swimmers:list") || [];
+    const swimmersPromise = kv.get("swimmers:list");
+    const swimmers = await withTimeout(swimmersPromise, 8000, 'Timeout fetching swimmers') || [];
     
     const filteredSwimmers = swimmers.filter((s: any) => s.id !== id);
     
@@ -115,12 +221,16 @@ app.delete("/make-server-000a47d9/swimmers/:id", async (c) => {
       return c.json({ error: "Swimmer not found" }, 404);
     }
     
-    await kv.set("swimmers:list", filteredSwimmers);
+    const savePromise = kv.set("swimmers:list", filteredSwimmers);
+    await withTimeout(savePromise, 8000, 'Timeout saving swimmers');
     
     // Also delete all attendance records for this swimmer
-    const attendanceKeys = await kv.getByPrefix(`attendance:${id}:`);
+    const attendanceKeysPromise = kv.getByPrefix(`attendance:${id}:`);
+    const attendanceKeys = await withTimeout(attendanceKeysPromise, 8000, 'Timeout fetching attendance keys');
+    
     if (attendanceKeys && attendanceKeys.length > 0) {
-      await kv.mdel(attendanceKeys.map((item: any) => item.key));
+      const deletePromise = kv.mdel(attendanceKeys.map((item: any) => item.key));
+      await withTimeout(deletePromise, 8000, 'Timeout deleting attendance records');
     }
     
     return c.json({ success: true });
@@ -135,7 +245,13 @@ app.delete("/make-server-000a47d9/swimmers/:id", async (c) => {
 // Get all attendance records
 app.get("/make-server-000a47d9/attendance", async (c) => {
   try {
-    const records = await kv.getByPrefix("attendance:");
+    const recordsPromise = kv.getByPrefix("attendance:");
+    const records = await withTimeout(
+      recordsPromise,
+      15000,
+      'Timeout fetching attendance records'
+    );
+    
     const attendanceList = records
       ? records
           .filter((item: any) => item.key !== "attendance:list")
@@ -196,14 +312,15 @@ app.delete("/make-server-000a47d9/attendance/:id", async (c) => {
     const id = c.req.param("id");
     console.log("🔍 Attempting to delete attendance record with ID:", id);
     
-    // Find and delete the record
-    const allRecords = await kv.getByPrefix("attendance:");
-    console.log("📋 Total attendance records found:", allRecords?.length || 0);
+    // Find and delete the record with timeout
+    const allRecordsPromise = kv.getByPrefix("attendance:");
+    const allRecords = await withTimeout(
+      allRecordsPromise,
+      10000,
+      'Timeout while searching for attendance record'
+    );
     
-    // Log all record IDs for debugging
-    if (allRecords && allRecords.length > 0) {
-      console.log("📝 Available record IDs:", allRecords.map((item: any) => item.value?.id).filter(Boolean));
-    }
+    console.log("📋 Total attendance records found:", allRecords?.length || 0);
     
     const recordItem = allRecords?.find((item: any) => item.value?.id === id);
     
@@ -214,7 +331,14 @@ app.delete("/make-server-000a47d9/attendance/:id", async (c) => {
     }
     
     console.log("✅ Found record to delete:", recordItem.key);
-    await kv.del(recordItem.key);
+    
+    const deletePromise = kv.del(recordItem.key);
+    await withTimeout(
+      deletePromise,
+      5000,
+      'Timeout while deleting attendance record'
+    );
+    
     console.log("✅ Attendance record deleted successfully");
     
     return c.json({ success: true });
@@ -242,7 +366,8 @@ app.get("/make-server-000a47d9/competitions", async (c) => {
 // Get all workouts
 app.get("/make-server-000a47d9/workouts", async (c) => {
   try {
-    const workouts = await kv.get("workouts:list");
+    const workoutsPromise = kv.get("workouts:list");
+    const workouts = await withTimeout(workoutsPromise, 10000, 'Timeout fetching workouts');
     // Filtrar solo los no eliminados por defecto
     const activeWorkouts = (workouts || []).filter((w: any) => !w.deleted);
     return c.json({ workouts: activeWorkouts });
@@ -261,6 +386,19 @@ app.get("/make-server-000a47d9/workouts/trash", async (c) => {
   } catch (error) {
     console.error("Error fetching deleted workouts:", error);
     return c.json({ error: "Failed to fetch deleted workouts", details: String(error) }, 500);
+  }
+});
+
+// Clear ALL workouts (admin only - use with caution)
+// IMPORTANT: This route must be BEFORE routes with :id parameters
+app.delete("/make-server-000a47d9/workouts/clear-all", async (c) => {
+  try {
+    await kv.set("workouts:list", []);
+    console.log(`🧹 ALL workouts cleared from database`);
+    return c.json({ success: true, message: "All workouts cleared" });
+  } catch (error) {
+    console.error("Error clearing all workouts:", error);
+    return c.json({ error: "Failed to clear all workouts", details: String(error) }, 500);
   }
 });
 
@@ -673,27 +811,37 @@ app.post("/make-server-000a47d9/competition-results", async (c) => {
       return c.json({ error: "Missing required fields: swimmerId, competitionId, events" }, 400);
     }
     
-    // Get current data
-    const swimmers = await kv.get("swimmers:list") || [];
-    const participations = await kv.get("swimmer_competitions:list") || [];
-    const competitions = await kv.get("competitions:list") || [];
+    // Get current data with timeouts
+    const swimmersPromise = kv.get("swimmers:list");
+    const participationsPromise = kv.get("swimmer_competitions:list");
+    const competitionsPromise = kv.get("competitions:list");
+    
+    const [swimmers, participations, competitions] = await Promise.all([
+      withTimeout(swimmersPromise, 8000, 'Timeout fetching swimmers'),
+      withTimeout(participationsPromise, 8000, 'Timeout fetching participations'),
+      withTimeout(competitionsPromise, 8000, 'Timeout fetching competitions')
+    ]);
+    
+    const swimmersList = swimmers || [];
+    const participationsList = participations || [];
+    const competitionsList = competitions || [];
     
     // Find swimmer
-    const swimmerIndex = swimmers.findIndex((s: any) => s.id === swimmerId);
+    const swimmerIndex = swimmersList.findIndex((s: any) => s.id === swimmerId);
     if (swimmerIndex === -1) {
       return c.json({ error: "Swimmer not found" }, 404);
     }
     
     // Find competition
-    const competition = competitions.find((c: any) => c.id === competitionId);
+    const competition = competitionsList.find((c: any) => c.id === competitionId);
     if (!competition) {
       return c.json({ error: "Competition not found" }, 404);
     }
     
-    const swimmer = swimmers[swimmerIndex];
+    const swimmer = swimmersList[swimmerIndex];
     
     // Find or create participation
-    let participationIndex = participations.findIndex(
+    let participationIndex = participationsList.findIndex(
       (p: any) => p.swimmerId === swimmerId && p.competitionId === competitionId
     );
     
@@ -708,11 +856,11 @@ app.post("/make-server-000a47d9/competition-results", async (c) => {
         participates: true,
         events: events
       };
-      participations.push(participation);
-      participationIndex = participations.length - 1;
+      participationsList.push(participation);
+      participationIndex = participationsList.length - 1;
     } else {
       // Update existing participation
-      participation = participations[participationIndex];
+      participation = participationsList[participationIndex];
       participation.events = events;
     }
     
@@ -777,22 +925,27 @@ app.post("/make-server-000a47d9/competition-results", async (c) => {
     }
     
     // Update swimmer with new bests and history
-    swimmers[swimmerIndex] = {
+    swimmersList[swimmerIndex] = {
       ...swimmer,
       personalBests: updatedBests,
       personalBestsHistory: [...currentHistory, ...newHistoryEntries]
     };
     
-    // Save all updates
-    await kv.set("swimmers:list", swimmers);
-    await kv.set("swimmer_competitions:list", participations);
+    // Save all updates with timeouts
+    const saveSwimmersPromise = kv.set("swimmers:list", swimmersList);
+    const saveParticipationsPromise = kv.set("swimmer_competitions:list", participationsList);
+    
+    await Promise.all([
+      withTimeout(saveSwimmersPromise, 10000, 'Timeout saving swimmers'),
+      withTimeout(saveParticipationsPromise, 10000, 'Timeout saving participations')
+    ]);
     
     console.log(`✅ Competition results updated for swimmer ${swimmerId} in competition ${competitionId}`);
     console.log(`   - ${newHistoryEntries.filter((e: any) => e.isPersonalBest).length} new personal best(s)`);
     
     return c.json({
-      participation: participations[participationIndex],
-      swimmer: swimmers[swimmerIndex]
+      participation: participationsList[participationIndex],
+      swimmer: swimmersList[swimmerIndex]
     });
   } catch (error) {
     console.error("Error updating competition results:", error);
@@ -1516,11 +1669,17 @@ app.post("/make-server-000a47d9/auth/login", async (c) => {
       return c.json({ error: "Missing email or password" }, 400);
     }
     
-    // Sign in with Supabase Auth
-    const { data: authData, error: signInError } = await supabaseAdmin.auth.signInWithPassword({
-      email,
-      password
-    });
+    // Sign in with Supabase Auth with timeout
+    const authResult = await withTimeout(
+      supabaseAdmin.auth.signInWithPassword({
+        email,
+        password
+      }),
+      10000, // 10 second timeout
+      'Login timeout - please try again'
+    );
+    
+    const { data: authData, error: signInError } = authResult;
     
     if (signInError) {
       console.error("Login failed:", signInError.message);
@@ -1635,4 +1794,74 @@ app.delete("/make-server-000a47d9/auth/user/:userId", async (c) => {
   }
 });
 
-Deno.serve(app.fetch);
+// Wrap app.fetch to ensure proper response handling
+const handler = async (req: Request): Promise<Response> => {
+  const startTime = Date.now();
+  const reqId = Math.random().toString(36).substring(7);
+  
+  try {
+    console.log(`[${reqId}] 📥 ${req.method} ${new URL(req.url).pathname}`);
+    
+    // Aumentar el timeout y asegurar que la respuesta se complete
+    const responsePromise = app.fetch(req);
+    const timeoutPromise = new Promise<Response>((_, reject) => 
+      setTimeout(() => reject(new Error('Request timeout after 55 seconds')), 55000)
+    );
+    
+    const response = await Promise.race([responsePromise, timeoutPromise]);
+    
+    const duration = Date.now() - startTime;
+    console.log(`[${reqId}] 📤 ${req.method} ${new URL(req.url).pathname} - Status: ${response.status} - Duration: ${duration}ms`);
+    
+    // Asegurar que el body se lea completamente antes de responder
+    if (response.body) {
+      const responseBody = await response.text();
+      
+      return new Response(responseBody, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: {
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'Content-Length': responseBody.length.toString()
+        }
+      });
+    }
+    
+    return new Response(null, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+      }
+    });
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    console.error(`[${reqId}] ❌ Fatal error in request handler (${duration}ms):`, error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    
+    const errorResponse = JSON.stringify({ 
+      error: 'Internal server error', 
+      message: error instanceof Error ? error.message : String(error),
+      requestId: reqId,
+      duration
+    });
+    
+    return new Response(errorResponse, { 
+      status: 500,
+      headers: { 
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        'Content-Length': errorResponse.length.toString()
+      }
+    });
+  }
+};
+
+Deno.serve(handler);

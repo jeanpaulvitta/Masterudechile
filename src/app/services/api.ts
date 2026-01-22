@@ -73,6 +73,13 @@ export async function addSwimmer(swimmer: Omit<Swimmer, 'id'>): Promise<Swimmer>
 
 export async function updateSwimmer(id: string, swimmer: Omit<Swimmer, 'id'>): Promise<Swimmer> {
   try {
+    console.log(`🌐 API: Enviando actualización de nadador ${id}`, {
+      hasPersonalBests: !!swimmer.personalBests,
+      personalBestsCount: swimmer.personalBests?.length || 0,
+      hasPersonalBestsHistory: !!swimmer.personalBestsHistory,
+      historyCount: swimmer.personalBestsHistory?.length || 0
+    });
+    
     const response = await fetch(`${API_BASE_URL}/swimmers/${id}`, {
       method: 'PUT',
       headers,
@@ -80,13 +87,21 @@ export async function updateSwimmer(id: string, swimmer: Omit<Swimmer, 'id'>): P
     });
     if (!response.ok) {
       const error = await response.json();
+      console.error('❌ API: Error response:', error);
       throw new Error(`Failed to update swimmer: ${error.error || response.statusText}`);
     }
     const data = await response.json();
-    console.log('✅ Swimmer updated:', data.swimmer);
+    console.log('✅ API: Swimmer updated:', {
+      id: data.swimmer.id,
+      name: data.swimmer.name,
+      hasPersonalBests: !!data.swimmer.personalBests,
+      personalBestsCount: data.swimmer.personalBests?.length || 0,
+      hasPersonalBestsHistory: !!data.swimmer.personalBestsHistory,
+      historyCount: data.swimmer.personalBestsHistory?.length || 0
+    });
     return data.swimmer;
   } catch (error) {
-    console.error('❌ Error updating swimmer:', error);
+    console.error('❌ API: Error updating swimmer:', error);
     throw error;
   }
 }
@@ -442,6 +457,23 @@ export async function deleteWorkout(id: string): Promise<void> {
     console.log('✅ Workout deleted:', id);
   } catch (error) {
     console.error('❌ Error deleting workout:', error);
+    throw error;
+  }
+}
+
+export async function clearAllWorkouts(): Promise<void> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/workouts/clear-all`, {
+      method: 'DELETE',
+      headers,
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(`Failed to clear all workouts: ${error.error || response.statusText}`);
+    }
+    console.log('✅ All workouts cleared from database');
+  } catch (error) {
+    console.error('❌ Error clearing all workouts:', error);
     throw error;
   }
 }

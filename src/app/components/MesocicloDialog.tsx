@@ -135,6 +135,9 @@ export function MesocicloDialog({ mesociclo, sessions }: MesocicloDialogProps) {
               const weekChallenge = weekSessions.find(s => s.type === 'challenge');
               const weekDistance = weekSessions.reduce((sum, s) => sum + s.distance, 0);
               
+              // Formatear número de semana para negativos (Mantenimiento)
+              const weekLabel = weekNumber < 0 ? `M${Math.abs(weekNumber)}` : weekNumber.toString();
+              
               return (
                 <AccordionItem 
                   key={weekNumber} 
@@ -145,7 +148,7 @@ export function MesocicloDialog({ mesociclo, sessions }: MesocicloDialogProps) {
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full pr-4 gap-2 sm:gap-0">
                       <div className="flex items-center gap-4">
                         <div className="flex flex-col items-start">
-                          <span className="font-bold text-lg">Semana {weekNumber}</span>
+                          <span className="font-bold text-lg">Semana {weekLabel}</span>
                           <span className="text-sm text-gray-600">{weekSessions[0]?.date || ''}</span>
                         </div>
                       </div>

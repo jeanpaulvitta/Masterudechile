@@ -41,6 +41,7 @@ import { LogoConfig } from "./components/LogoConfig";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 import { PWAGenerator } from "./components/PWAGenerator";
 import { Toaster } from "./components/ui/sonner";
+import { ResponsiveTabsNav } from "./components/ResponsiveTabsNav";
 import type { Swimmer, Competition, SwimmerCompetition, PersonalBest, PersonalBestHistory, AttendanceRecord, SwimmerGoal } from "./data/swimmers";
 import type { Workout } from "./data/workouts";
 import type { Challenge } from "./data/challenges";
@@ -897,56 +898,8 @@ function MainApp() {
       <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
         {/* NAVEGACIÓN PRINCIPAL POR SECCIONES */}
         <Tabs value={activeSection} onValueChange={setActiveSection} className="w-full">
-          <TabsList className={`grid w-full ${user?.role === "admin" ? "grid-cols-4 sm:grid-cols-10" : "grid-cols-4 sm:grid-cols-8"} mb-4 sm:mb-8 h-auto gap-1`}>
-            <TabsTrigger value="entrenamientos" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-3 text-xs sm:text-sm">
-              <Dumbbell className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span className="hidden lg:inline">Entrenamientos</span>
-              <span className="lg:hidden">Entrenos</span>
-            </TabsTrigger>
-            <TabsTrigger value="calendario" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-3 text-xs sm:text-sm">
-              <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span>Calendario</span>
-            </TabsTrigger>
-            <TabsTrigger value="nadadores" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-3 text-xs sm:text-sm">
-              <Users className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span>Nadadores</span>
-            </TabsTrigger>
-            <TabsTrigger value="competencias" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-3 text-xs sm:text-sm">
-              <Medal className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span className="hidden lg:inline">Competencias</span>
-              <span className="lg:hidden">Compet.</span>
-            </TabsTrigger>
-            <TabsTrigger value="test-control" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-3 text-xs sm:text-sm">
-              <Clipboard className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span className="hidden lg:inline">Test Control</span>
-              <span className="lg:hidden">Tests</span>
-            </TabsTrigger>
-            <TabsTrigger value="records" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-3 text-xs sm:text-sm">
-              <Crown className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span>Récords</span>
-            </TabsTrigger>
-            <TabsTrigger value="logros" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-3 text-xs sm:text-sm">
-              <Award className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span>Logros</span>
-            </TabsTrigger>
-            <TabsTrigger value="asistencia" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-3 text-xs sm:text-sm">
-              <ClipboardList className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span>Asistencia</span>
-            </TabsTrigger>
-            {/* Pestaña de Usuarios - Solo para Administradores */}
-            {user?.role === "admin" && (
-              <>
-                <TabsTrigger value="usuarios" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-3 text-xs sm:text-sm">
-                  <Shield className="w-4 h-4 sm:w-5 sm:h-5" />
-                  <span>Usuarios</span>
-                </TabsTrigger>
-                <TabsTrigger value="pwa" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-3 text-xs sm:text-sm">
-                  <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
-                  <span>PWA</span>
-                </TabsTrigger>
-              </>
-            )}
-          </TabsList>
+          {/* Pestañas con diseño limpio y 100% responsive */}
+          <ResponsiveTabsNav userRole={user?.role} />
 
           {/* SECCIÓN 1: ENTRENAMIENTOS Y COMPETENCIAS */}
           <TabsContent value="entrenamientos" className="space-y-8">

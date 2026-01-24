@@ -39,6 +39,7 @@ import { TestControlManager } from "./components/TestControlManager";
 import { UserManager } from "./components/UserManager";
 import { LogoConfig } from "./components/LogoConfig";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
+import { PWAGenerator } from "./components/PWAGenerator";
 import { Toaster } from "./components/ui/sonner";
 import type { Swimmer, Competition, SwimmerCompetition, PersonalBest, PersonalBestHistory, AttendanceRecord, SwimmerGoal } from "./data/swimmers";
 import type { Workout } from "./data/workouts";
@@ -896,7 +897,7 @@ function MainApp() {
       <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
         {/* NAVEGACIÓN PRINCIPAL POR SECCIONES */}
         <Tabs value={activeSection} onValueChange={setActiveSection} className="w-full">
-          <TabsList className={`grid w-full ${user?.role === "admin" ? "grid-cols-4 sm:grid-cols-9" : "grid-cols-4 sm:grid-cols-8"} mb-4 sm:mb-8 h-auto gap-1`}>
+          <TabsList className={`grid w-full ${user?.role === "admin" ? "grid-cols-4 sm:grid-cols-10" : "grid-cols-4 sm:grid-cols-8"} mb-4 sm:mb-8 h-auto gap-1`}>
             <TabsTrigger value="entrenamientos" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-3 text-xs sm:text-sm">
               <Dumbbell className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="hidden lg:inline">Entrenamientos</span>
@@ -934,10 +935,16 @@ function MainApp() {
             </TabsTrigger>
             {/* Pestaña de Usuarios - Solo para Administradores */}
             {user?.role === "admin" && (
-              <TabsTrigger value="usuarios" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-3 text-xs sm:text-sm">
-                <Shield className="w-4 h-4 sm:w-5 sm:h-5" />
-                <span>Usuarios</span>
-              </TabsTrigger>
+              <>
+                <TabsTrigger value="usuarios" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-3 text-xs sm:text-sm">
+                  <Shield className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span>Usuarios</span>
+                </TabsTrigger>
+                <TabsTrigger value="pwa" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-3 text-xs sm:text-sm">
+                  <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span>PWA</span>
+                </TabsTrigger>
+              </>
             )}
           </TabsList>
 
@@ -1275,6 +1282,11 @@ function MainApp() {
           {/* SECCIÓN 7: USUARIOS */}
           <TabsContent value="usuarios" className="space-y-8">
             <UserManager swimmers={swimmers} />
+          </TabsContent>
+
+          {/* SECCIÓN 8: GENERADOR PWA */}
+          <TabsContent value="pwa" className="space-y-8">
+            <PWAGenerator />
           </TabsContent>
         </Tabs>
       </div>

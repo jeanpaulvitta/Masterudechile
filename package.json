@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "pwa:check": "echo 'Abre Chrome DevTools → Lighthouse → PWA para verificar la instalación'",
-    "icons:generate": "echo 'Visita /icon-generator.html en tu navegador para generar los íconos PNG'"
+    "icons:generate": "node scripts/generate-pwa-icons-from-svg.js"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
@@ -63,6 +63,7 @@
     "react-responsive-masonry": "2.7.1",
     "react-slick": "0.31.0",
     "recharts": "2.15.2",
+    "sharp": "^0.34.5",
     "sonner": "2.0.3",
     "tailwind-merge": "3.2.0",
     "tw-animate-css": "1.3.8",

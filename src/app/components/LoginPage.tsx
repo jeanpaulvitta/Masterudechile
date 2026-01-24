@@ -10,7 +10,6 @@ import { toast } from 'sonner';
 import { debugListAllUsers } from '../services/auth';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import * as api from '../services/api';
-import logoImage from 'figma:asset/f5fa508b6dd6458954cc36bcd7a8a3baa6d8e605.png';
 
 const LOGO_URL_KEY = 'natacion_master_logo_url';
 
@@ -297,11 +296,11 @@ export function LoginPage() {
                   onError={() => setLogoError(true)}
                 />
               ) : (
-                <img
-                  src={logoImage}
-                  alt="Logo Natación Master UCH"
-                  className="w-20 h-20 object-contain"
-                />
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 150" className="w-20 h-20">
+                  <rect width="150" height="150" fill="#003366"/>
+                  <text x="75" y="70" textAnchor="middle" dominantBaseline="middle" fill="white" fontFamily="Arial, sans-serif" fontSize="20" fontWeight="bold">MASTER</text>
+                  <text x="75" y="95" textAnchor="middle" dominantBaseline="middle" fill="white" fontFamily="Arial, sans-serif" fontSize="16">UCH</text>
+                </svg>
               )}
             </div>
           </div>

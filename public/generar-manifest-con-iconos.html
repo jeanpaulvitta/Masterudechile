@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generar Manifest con Íconos Base64</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #003366 0%, #0055aa 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #fff;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .container {
+      max-width: 700px;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      color: #1e293b;
+    }
+    
+    h1 {
+      color: #003366;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: #64748b;
+      margin-bottom: 30px;
+    }
+    
+    .btn {
+      width: 100%;
+      padding: 16px;
+      background: #003366;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-bottom: 15px;
+    }
+    
+    .btn:hover {
+      background: #0055aa;
+      transform: translateY(-2px);
+    }
+    
+    .btn:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+    }
+    
+    .result {
+      display: none;
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    
+    .result h3 {
+      color: #003366;
+      margin-bottom: 10px;
+    }
+    
+    .code-box {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 15px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    .success {
+      background: #d1fae5;
+      color: #065f46;
+      padding: 15px;
+      border-radius: 12px;
+      margin-bottom: 15px;
+      display: none;
+    }
+    
+    .info {
+      background: #fef3c7;
+      color: #78350f;
+      padding: 15px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎨 Generar Manifest PWA</h1>
+    <p class="subtitle">Con íconos embebidos (sin archivos PNG)</p>
+    
+    <div class="info">
+      <strong>💡 Solución sin archivos PNG:</strong><br>
+      Este generador crea un manifest.json con los íconos embebidos en base64. No necesitas subir archivos PNG a Git.
+    </div>
+    
+    <button class="btn" onclick="generateManifest()">
+      🚀 Generar manifest.json con Íconos
+    </button>
+    
+    <div class="success" id="success">
+      ✅ ¡Manifest generado! Copia el código de abajo y pégalo en <strong>/public/manifest.json</strong>
+    </div>
+    
+    <div class="result" id="result">
+      <h3>📄 Código para manifest.json</h3>
+      <pre class="code-box" id="codeBox"></pre>
+      <button class="btn" onclick="copyCode()">📋 Copiar Código</button>
+      <button class="btn" onclick="downloadManifest()">💾 Descargar manifest.json</button>
+    </div>
+  </div>
+
+  <script>
+    const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+    let generatedManifest = null;
+    
+    async function generateManifest() {
+      const btn = event.target;
+      btn.disabled = true;
+      btn.textContent = '⏳ Generando íconos...';
+      
+      try {
+        // Cargar el SVG
+        const response = await fetch('/icons/icon.svg');
+        const svgText = await response.text();
+        
+        // Crear imagen desde SVG
+        const img = new Image();
+        const svgBlob = new Blob([svgText], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(svgBlob);
+        
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = url;
+        });
+        
+        // Generar íconos en base64
+        const icons = [];
+        
+        for (const size of sizes) {
+          btn.textContent = `⏳ Generando ${size}x${size}...`;
+          
+          const canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, size, size);
+          
+          // Convertir a base64
+          const base64 = canvas.toDataURL('image/png');
+          
+          icons.push({
+            src: base64,
+            sizes: `${size}x${size}`,
+            type: 'image/png',
+            purpose: size >= 192 ? 'any maskable' : 'any'
+          });
+        }
+        
+        URL.revokeObjectURL(url);
+        
+        // Crear el manifest completo
+        const manifest = {
+          name: "Natación Master UCH",
+          short_name: "Master UCH",
+          description: "Aplicación PWA para el equipo de Natación Master de la Universidad de Chile",
+          start_url: "/",
+          display: "standalone",
+          background_color: "#003366",
+          theme_color: "#003366",
+          orientation: "portrait",
+          icons: icons,
+          categories: ["sports", "health", "lifestyle"],
+          lang: "es",
+          dir: "ltr"
+        };
+        
+        generatedManifest = manifest;
+        
+        // Mostrar resultado
+        const codeBox = document.getElementById('codeBox');
+        codeBox.textContent = JSON.stringify(manifest, null, 2);
+        
+        document.getElementById('success').style.display = 'block';
+        document.getElementById('result').style.display = 'block';
+        
+        btn.textContent = '✅ Manifest Generado';
+        btn.style.background = '#10b981';
+        
+      } catch (error) {
+        console.error('Error:', error);
+        alert('❌ Error: ' + error.message);
+        btn.disabled = false;
+        btn.textContent = '🚀 Generar manifest.json con Íconos';
+      }
+    }
+    
+    function copyCode() {
+      const codeBox = document.getElementById('codeBox');
+      navigator.clipboard.writeText(codeBox.textContent);
+      
+      const btn = event.target;
+      const originalText = btn.textContent;
+      btn.textContent = '✅ Copiado!';
+      setTimeout(() => {
+        btn.textContent = originalText;
+      }, 2000);
+    }
+    
+    function downloadManifest() {
+      if (!generatedManifest) return;
+      
+      const blob = new Blob([JSON.stringify(generatedManifest, null, 2)], {
+        type: 'application/json'
+      });
+      
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'manifest.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>

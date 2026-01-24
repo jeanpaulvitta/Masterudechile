@@ -201,12 +201,19 @@
     </div>
     
     <div class="upload-area" id="uploadArea">
-      <p style="font-size: 48px; margin-bottom: 15px;">📤</p>
-      <p style="color: #475569; margin-bottom: 20px;">
-        Arrastra tu imagen aquí o haz clic para seleccionar
+      <p style="font-size: 48px; margin-bottom: 15px;">🎨</p>
+      <p style="color: #475569; margin-bottom: 20px; font-weight: 600;">
+        Generando íconos del logo oficial de Master UCH...
+      </p>
+      <button class="upload-btn" id="generateBtn" onclick="generateFromDefault()">
+        ✨ Generar Íconos del Logo Oficial
+      </button>
+      <p style="color: #64748b; font-size: 14px; margin: 20px 0;">— o —</p>
+      <p style="color: #475569; margin-bottom: 15px;">
+        Arrastra tu propia imagen aquí o haz clic para seleccionar
       </p>
       <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
-        Seleccionar Imagen
+        📤 Seleccionar Imagen Personalizada
       </button>
       <input type="file" id="fileInput" accept="image/*">
       <p style="color: #94a3b8; font-size: 12px; margin-top: 15px;">
@@ -242,6 +249,7 @@
     const previewGrid = document.getElementById('previewGrid');
     const downloadAllBtn = document.getElementById('downloadAllBtn');
     const successMessage = document.getElementById('successMessage');
+    const generateBtn = document.getElementById('generateBtn');
     
     // Drag and drop handlers
     uploadArea.addEventListener('dragover', (e) => {
@@ -334,6 +342,35 @@
       alert('✅ Todos los íconos han sido descargados.\n\n📁 Ahora guárdalos en /public/icons/ de tu proyecto.\n\n💡 Nombres de archivo:\n' + 
         sizes.map(s => `- icon-${s}x${s}.png`).join('\n'));
     }
+    
+    function generateFromDefault() {
+      generateBtn.disabled = true;
+      generateBtn.textContent = '⏳ Generando...';
+      
+      // Cargar el logo oficial desde la carpeta de íconos
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        generateIcons(img);
+        generateBtn.disabled = false;
+        generateBtn.textContent = '✨ Generar Íconos del Logo Oficial';
+      };
+      img.onerror = () => {
+        alert('⚠️ No se pudo cargar el logo oficial.\\n\\nPor favor, sube manualmente la imagen del logo.');
+        generateBtn.disabled = false;
+        generateBtn.textContent = '✨ Generar Íconos del Logo Oficial';
+      };
+      // Usar el favicon.svg o icon.svg como fuente
+      img.src = '/icons/icon.svg';
+    }
+    
+    // Auto-generar al cargar la página
+    window.addEventListener('load', () => {
+      // Pequeño delay para asegurar que todo esté cargado
+      setTimeout(() => {
+        generateFromDefault();
+      }, 500);
+    });
   </script>
 </body>
 </html>

@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generador PWA Completo - Master UCH</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #003366 0%, #0055aa 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #fff;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      color: #1e293b;
+    }
+    
+    h1 {
+      color: #003366;
+      font-size: 28px;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: #64748b;
+      font-size: 14px;
+      margin-bottom: 30px;
+    }
+    
+    .upload-area {
+      border: 3px dashed #cbd5e1;
+      border-radius: 12px;
+      padding: 40px;
+      text-align: center;
+      margin-bottom: 30px;
+      background: #f8fafc;
+      transition: all 0.3s;
+      cursor: pointer;
+    }
+    
+    .upload-area:hover {
+      border-color: #003366;
+      background: #f1f5f9;
+    }
+    
+    .upload-area.dragover {
+      border-color: #003366;
+      background: #e0f2fe;
+    }
+    
+    .upload-icon {
+      font-size: 64px;
+      margin-bottom: 15px;
+    }
+    
+    input[type="file"] {
+      display: none;
+    }
+    
+    .preview-container {
+      display: none;
+      text-align: center;
+      margin-bottom: 20px;
+      padding: 20px;
+      background: #f8fafc;
+      border-radius: 12px;
+    }
+    
+    .preview-image {
+      max-width: 200px;
+      max-height: 200px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      margin-bottom: 15px;
+    }
+    
+    .btn {
+      width: 100%;
+      padding: 16px;
+      background: #003366;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-bottom: 10px;
+    }
+    
+    .btn:hover:not(:disabled) {
+      background: #0055aa;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(0, 51, 102, 0.3);
+    }
+    
+    .btn:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .btn-success {
+      background: #10b981;
+    }
+    
+    .btn-success:hover:not(:disabled) {
+      background: #059669;
+    }
+    
+    .progress {
+      display: none;
+      margin: 20px 0;
+    }
+    
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: #e2e8f0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: #003366;
+      width: 0%;
+      transition: width 0.3s;
+    }
+    
+    .progress-text {
+      text-align: center;
+      margin-top: 10px;
+      font-size: 14px;
+      color: #64748b;
+    }
+    
+    .result {
+      display: none;
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    
+    .result h3 {
+      color: #003366;
+      margin-bottom: 15px;
+      font-size: 18px;
+    }
+    
+    .code-box {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 15px;
+      border-radius: 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      max-height: 300px;
+      overflow-y: auto;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+    }
+    
+    .success-message {
+      display: none;
+      background: #d1fae5;
+      color: #065f46;
+      padding: 16px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      border: 1px solid #6ee7b7;
+    }
+    
+    .info-box {
+      background: #fef3c7;
+      color: #78350f;
+      padding: 16px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    
+    .tab {
+      flex: 1;
+      padding: 12px;
+      background: #e2e8f0;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+    
+    .tab.active {
+      background: #003366;
+      color: white;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎨 Generador PWA Completo</h1>
+    <p class="subtitle">Master UCH - Sube tu logo y genera todo automáticamente</p>
+    
+    <div class="info-box">
+      <strong>💡 Sin archivos en Git:</strong><br>
+      Sube la imagen del logo desde tu computadora. El generador creará:<br>
+      ✅ Íconos en todos los tamaños<br>
+      ✅ Manifest.json con íconos embebidos<br>
+      ✅ Todo listo para copiar y pegar - ¡Sin push de imágenes!
+    </div>
+    
+    <div class="success-message" id="successMessage">
+      ✅ ¡Manifest generado exitosamente! Copia el código de abajo.
+    </div>
+    
+    <div class="upload-area" id="uploadArea">
+      <div class="upload-icon">📤</div>
+      <p style="color: #475569; font-weight: 600; margin-bottom: 10px;">
+        Arrastra aquí el logo de Master UCH
+      </p>
+      <p style="color: #94a3b8; font-size: 14px; margin-bottom: 15px;">
+        o haz clic para seleccionar
+      </p>
+      <button class="btn" onclick="document.getElementById('fileInput').click()">
+        Seleccionar Imagen
+      </button>
+      <input type="file" id="fileInput" accept="image/*">
+      <p style="color: #94a3b8; font-size: 12px; margin-top: 15px;">
+        Formatos: PNG, JPG, SVG (recomendado: 512x512px o mayor)
+      </p>
+    </div>
+    
+    <div class="preview-container" id="previewContainer">
+      <h3 style="color: #003366; margin-bottom: 15px;">Vista Previa del Logo</h3>
+      <img id="previewImage" class="preview-image" alt="Vista previa">
+      <p id="imageName" style="color: #64748b; font-size: 14px;"></p>
+    </div>
+    
+    <button id="generateBtn" class="btn" onclick="generateAll()" style="display: none;">
+      🚀 Generar Manifest PWA Completo
+    </button>
+    
+    <div id="progress" class="progress">
+      <div class="progress-bar">
+        <div id="progressFill" class="progress-fill"></div>
+      </div>
+      <div id="progressText" class="progress-text">Generando...</div>
+    </div>
+    
+    <div id="tabs" class="tabs">
+      <button class="tab active" onclick="switchTab('manifest')">📄 manifest.json</button>
+      <button class="tab" onclick="switchTab('favicon')">🔖 favicon.svg</button>
+      <button class="tab" onclick="switchTab('icon')">🎨 icon.svg</button>
+    </div>
+    
+    <div id="result" class="result">
+      <div id="manifestTab" class="tab-content active">
+        <h3>📄 Código para /public/manifest.json</h3>
+        <pre class="code-box" id="manifestCode"></pre>
+        <button class="btn btn-success" onclick="copyCode('manifestCode')">
+          📋 Copiar manifest.json
+        </button>
+        <button class="btn" onclick="downloadFile('manifest.json', 'manifestCode')">
+          💾 Descargar manifest.json
+        </button>
+      </div>
+      
+      <div id="faviconTab" class="tab-content">
+        <h3>🔖 Código para /public/icons/favicon.svg</h3>
+        <pre class="code-box" id="faviconCode"></pre>
+        <button class="btn btn-success" onclick="copyCode('faviconCode')">
+          📋 Copiar favicon.svg
+        </button>
+        <button class="btn" onclick="downloadFile('favicon.svg', 'faviconCode')">
+          💾 Descargar favicon.svg
+        </button>
+      </div>
+      
+      <div id="iconTab" class="tab-content">
+        <h3>🎨 Código para /public/icons/icon.svg</h3>
+        <pre class="code-box" id="iconCode"></pre>
+        <button class="btn btn-success" onclick="copyCode('iconCode')">
+          📋 Copiar icon.svg
+        </button>
+        <button class="btn" onclick="downloadFile('icon.svg', 'iconCode')">
+          💾 Descargar icon.svg
+        </button>
+      </div>
+    </div>
+    
+    <div class="info-box" style="margin-top: 20px; display: none;" id="instructions">
+      <h4 style="margin-bottom: 10px; font-size: 16px;">📝 Instrucciones:</h4>
+      <ol style="margin-left: 20px; line-height: 1.8;">
+        <li>Copia el código de <strong>manifest.json</strong> y pégalo en <code>/public/manifest.json</code></li>
+        <li>Copia el código de <strong>favicon.svg</strong> y pégalo en <code>/public/icons/favicon.svg</code></li>
+        <li>Copia el código de <strong>icon.svg</strong> y pégalo en <code>/public/icons/icon.svg</code></li>
+        <li>Haz <code>git push</code> - ¡Solo 3 archivos pequeños, sin imágenes PNG!</li>
+      </ol>
+    </div>
+  </div>
+
+  <script>
+    let uploadedImage = null;
+    const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+    
+    // Configurar drag & drop
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    
+    uploadArea.addEventListener('click', () => fileInput.click());
+    
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.classList.add('dragover');
+    });
+    
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.classList.remove('dragover');
+    });
+    
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('dragover');
+      
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        handleFile(files[0]);
+      }
+    });
+    
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) {
+        handleFile(e.target.files[0]);
+      }
+    });
+    
+    function handleFile(file) {
+      if (!file.type.startsWith('image/')) {
+        alert('❌ Por favor selecciona una imagen válida (PNG, JPG, SVG)');
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        uploadedImage = e.target.result;
+        
+        // Mostrar vista previa
+        const previewContainer = document.getElementById('previewContainer');
+        const previewImage = document.getElementById('previewImage');
+        const imageName = document.getElementById('imageName');
+        const generateBtn = document.getElementById('generateBtn');
+        
+        previewImage.src = uploadedImage;
+        imageName.textContent = file.name;
+        previewContainer.style.display = 'block';
+        generateBtn.style.display = 'block';
+        uploadArea.style.display = 'none';
+      };
+      
+      reader.readAsDataURL(file);
+    }
+    
+    async function generateAll() {
+      const generateBtn = document.getElementById('generateBtn');
+      const progress = document.getElementById('progress');
+      const progressFill = document.getElementById('progressFill');
+      const progressText = document.getElementById('progressText');
+      const result = document.getElementById('result');
+      const tabs = document.getElementById('tabs');
+      const successMessage = document.getElementById('successMessage');
+      const instructions = document.getElementById('instructions');
+      
+      generateBtn.disabled = true;
+      generateBtn.textContent = '⏳ Generando...';
+      progress.style.display = 'block';
+      
+      try {
+        // Crear imagen
+        const img = new Image();
+        img.src = uploadedImage;
+        
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+        });
+        
+        // Generar íconos en base64
+        progressText.textContent = 'Generando íconos en todos los tamaños...';
+        const icons = [];
+        
+        for (let i = 0; i < sizes.length; i++) {
+          const size = sizes[i];
+          const progress = ((i + 1) / sizes.length) * 50; // 50% para íconos
+          
+          progressFill.style.width = `${progress}%`;
+          progressText.textContent = `Generando ${size}x${size}... (${i + 1}/${sizes.length})`;
+          
+          const canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, size, size);
+          
+          const base64 = canvas.toDataURL('image/png');
+          
+          icons.push({
+            src: base64,
+            sizes: `${size}x${size}`,
+            type: 'image/png',
+            purpose: size >= 192 ? 'any maskable' : 'any'
+          });
+          
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        // Generar manifest.json
+        progressFill.style.width = '60%';
+        progressText.textContent = 'Creando manifest.json...';
+        
+        const manifest = {
+          name: "Natación Master UCH",
+          short_name: "Master UCH",
+          description: "Aplicación PWA para el equipo de Natación Master de la Universidad de Chile",
+          start_url: "/",
+          display: "standalone",
+          background_color: "#003366",
+          theme_color: "#003366",
+          orientation: "portrait",
+          icons: icons,
+          categories: ["sports", "health", "lifestyle"],
+          lang: "es",
+          dir: "ltr"
+        };
+        
+        document.getElementById('manifestCode').textContent = JSON.stringify(manifest, null, 2);
+        
+        // Generar SVG simple (sin base64 pesado)
+        progressFill.style.width = '80%';
+        progressText.textContent = 'Creando SVG optimizados...';
+        
+        // Para los SVG, usar una versión optimizada sin base64
+        const svgCode = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 150">
+  <rect width="150" height="150" fill="#003366"/>
+  <text x="75" y="75" text-anchor="middle" dominant-baseline="middle" fill="white" font-family="Arial, sans-serif" font-size="20" font-weight="bold">MASTER</text>
+  <text x="75" y="95" text-anchor="middle" dominant-baseline="middle" fill="white" font-family="Arial, sans-serif" font-size="16">UCH</text>
+</svg>`;
+        
+        document.getElementById('faviconCode').textContent = svgCode;
+        document.getElementById('iconCode').textContent = svgCode;
+        
+        // Completar
+        progressFill.style.width = '100%';
+        progressText.textContent = '¡Completado! ✅';
+        
+        // Mostrar resultados
+        setTimeout(() => {
+          successMessage.style.display = 'block';
+          result.style.display = 'block';
+          tabs.style.display = 'flex';
+          instructions.style.display = 'block';
+          generateBtn.textContent = '✅ Manifest Generado';
+          generateBtn.style.background = '#10b981';
+        }, 500);
+        
+      } catch (error) {
+        console.error('Error:', error);
+        alert('❌ Error al generar: ' + error.message);
+        generateBtn.disabled = false;
+        generateBtn.textContent = '🚀 Generar Manifest PWA Completo';
+        progress.style.display = 'none';
+      }
+    }
+    
+    function switchTab(tabName) {
+      // Actualizar botones
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      event.target.classList.add('active');
+      
+      // Actualizar contenido
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      document.getElementById(tabName + 'Tab').classList.add('active');
+    }
+    
+    async function copyCode(elementId) {
+      const codeBox = document.getElementById(elementId);
+      const btn = event.target;
+      const originalText = btn.textContent;
+      
+      try {
+        // Intentar usar el Clipboard API moderno
+        await navigator.clipboard.writeText(codeBox.textContent);
+        btn.textContent = '✅ Copiado!';
+        setTimeout(() => {
+          btn.textContent = originalText;
+        }, 2000);
+      } catch (err) {
+        // Fallback: Método clásico con textarea temporal
+        try {
+          const textarea = document.createElement('textarea');
+          textarea.value = codeBox.textContent;
+          textarea.style.position = 'fixed';
+          textarea.style.opacity = '0';
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+          
+          btn.textContent = '✅ Copiado!';
+          setTimeout(() => {
+            btn.textContent = originalText;
+          }, 2000);
+        } catch (fallbackErr) {
+          console.error('Error al copiar:', fallbackErr);
+          alert('❌ No se pudo copiar automáticamente. Por favor, selecciona el texto manualmente y presiona Ctrl+C (o Cmd+C en Mac)');
+        }
+      }
+    }
+    
+    function downloadFile(filename, elementId) {
+      const content = document.getElementById(elementId).textContent;
+      const blob = new Blob([content], { 
+        type: filename.endsWith('.json') ? 'application/json' : 'image/svg+xml'
+      });
+      
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>✨ Generar Íconos PWA - Master UCH</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #003366 0%, #0055aa 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: #fff;
+    }
+    
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      color: #1e293b;
+    }
+    
+    h1 {
+      color: #003366;
+      font-size: 32px;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+    
+    .subtitle {
+      text-align: center;
+      color: #64748b;
+      font-size: 16px;
+      margin-bottom: 30px;
+    }
+    
+    .status {
+      background: #f1f5f9;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+    
+    .status-item:last-child {
+      margin-bottom: 0;
+    }
+    
+    .icon {
+      font-size: 20px;
+    }
+    
+    .btn {
+      width: 100%;
+      padding: 16px;
+      background: #003366;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-bottom: 15px;
+    }
+    
+    .btn:hover {
+      background: #0055aa;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(0, 51, 102, 0.3);
+    }
+    
+    .btn:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .btn-success {
+      background: #10b981;
+    }
+    
+    .btn-success:hover {
+      background: #059669;
+    }
+    
+    .progress {
+      margin-top: 20px;
+      display: none;
+    }
+    
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: #e2e8f0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      background: #003366;
+      width: 0%;
+      transition: width 0.3s;
+    }
+    
+    .progress-text {
+      text-align: center;
+      margin-top: 10px;
+      font-size: 14px;
+      color: #64748b;
+    }
+    
+    .preview {
+      display: none;
+      margin-top: 30px;
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 20px;
+    }
+    
+    .preview h3 {
+      color: #003366;
+      margin-bottom: 15px;
+      font-size: 18px;
+    }
+    
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 15px;
+    }
+    
+    .preview-item {
+      text-align: center;
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+    }
+    
+    .preview-item img {
+      width: 64px;
+      height: 64px;
+      object-fit: contain;
+      margin-bottom: 8px;
+    }
+    
+    .preview-item-name {
+      font-size: 12px;
+      color: #64748b;
+    }
+    
+    .success-message {
+      display: none;
+      background: #d1fae5;
+      color: #065f46;
+      padding: 16px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      border: 1px solid #6ee7b7;
+    }
+    
+    .instructions {
+      background: #fef3c7;
+      color: #78350f;
+      padding: 16px;
+      border-radius: 12px;
+      margin-top: 20px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    
+    .instructions h4 {
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+    
+    .instructions ol {
+      margin-left: 20px;
+    }
+    
+    .instructions li {
+      margin-bottom: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>✨ Generar Íconos PWA</h1>
+    <p class="subtitle">Master UCH - Natación</p>
+    
+    <div id="successMessage" class="success-message">
+      <strong>¡Éxito!</strong> Todos los íconos PNG han sido generados correctamente.
+    </div>
+    
+    <div class="status">
+      <div class="status-item">
+        <span class="icon">📦</span>
+        <span><strong>Logo fuente:</strong> /public/icons/icon.svg</span>
+      </div>
+      <div class="status-item">
+        <span class="icon">🎯</span>
+        <span><strong>Tamaños a generar:</strong> 8 archivos PNG (72px - 512px)</span>
+      </div>
+      <div class="status-item">
+        <span class="icon">💾</span>
+        <span><strong>Destino:</strong> Descarga automática (luego copiar a /public/icons/)</span>
+      </div>
+    </div>
+    
+    <button id="generateBtn" class="btn" onclick="generateIcons()">
+      🚀 Generar Todos los Íconos PNG
+    </button>
+    
+    <button id="downloadBtn" class="btn btn-success" onclick="downloadAll()" style="display: none;">
+      ⬇️ Descargar Todos los Íconos (ZIP)
+    </button>
+    
+    <div id="progress" class="progress">
+      <div class="progress-bar">
+        <div id="progressFill" class="progress-fill"></div>
+      </div>
+      <div id="progressText" class="progress-text">Generando íconos...</div>
+    </div>
+    
+    <div id="preview" class="preview">
+      <h3>Vista Previa de los Íconos Generados</h3>
+      <div id="previewGrid" class="preview-grid"></div>
+    </div>
+    
+    <div class="instructions">
+      <h4>📝 Instrucciones para Guardar los Íconos</h4>
+      <ol>
+        <li>Haz clic en <strong>"Generar Todos los Íconos PNG"</strong></li>
+        <li>Se descargarán 8 archivos PNG automáticamente</li>
+        <li><strong>Copia manualmente</strong> estos archivos a la carpeta <code>/public/icons/</code> de tu proyecto</li>
+        <li>Haz <code>git add</code>, <code>git commit</code> y <code>git push</code></li>
+        <li>¡Vercel desplegará tu PWA con los nuevos íconos! 🎊</li>
+      </ol>
+    </div>
+  </div>
+
+  <script>
+    const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+    const generatedIcons = {};
+    
+    async function generateIcons() {
+      const btn = document.getElementById('generateBtn');
+      const progress = document.getElementById('progress');
+      const progressFill = document.getElementById('progressFill');
+      const progressText = document.getElementById('progressText');
+      const preview = document.getElementById('preview');
+      const previewGrid = document.getElementById('previewGrid');
+      const successMessage = document.getElementById('successMessage');
+      const downloadBtn = document.getElementById('downloadBtn');
+      
+      btn.disabled = true;
+      btn.textContent = '⏳ Generando...';
+      progress.style.display = 'block';
+      previewGrid.innerHTML = '';
+      
+      try {
+        // Cargar el SVG desde /public/icons/icon.svg
+        progressText.textContent = 'Cargando logo oficial...';
+        const response = await fetch('/icons/icon.svg');
+        const svgText = await response.text();
+        
+        // Crear una imagen desde el SVG
+        const img = new Image();
+        const svgBlob = new Blob([svgText], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(svgBlob);
+        
+        await new Promise((resolve, reject) => {
+          img.onload = resolve;
+          img.onerror = reject;
+          img.src = url;
+        });
+        
+        // Generar cada tamaño
+        for (let i = 0; i < sizes.length; i++) {
+          const size = sizes[i];
+          const progress = ((i + 1) / sizes.length) * 100;
+          
+          progressFill.style.width = `${progress}%`;
+          progressText.textContent = `Generando icon-${size}x${size}.png (${i + 1}/${sizes.length})`;
+          
+          // Crear canvas
+          const canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext('2d');
+          
+          // Dibujar imagen redimensionada
+          ctx.drawImage(img, 0, 0, size, size);
+          
+          // Convertir a Blob
+          const blob = await new Promise(resolve => {
+            canvas.toBlob(resolve, 'image/png');
+          });
+          
+          // Guardar para descargar
+          generatedIcons[`icon-${size}x${size}.png`] = blob;
+          
+          // Añadir a vista previa
+          const previewItem = document.createElement('div');
+          previewItem.className = 'preview-item';
+          
+          const previewImg = document.createElement('img');
+          previewImg.src = canvas.toDataURL();
+          
+          const previewName = document.createElement('div');
+          previewName.className = 'preview-item-name';
+          previewName.textContent = `${size}x${size}`;
+          
+          previewItem.appendChild(previewImg);
+          previewItem.appendChild(previewName);
+          previewGrid.appendChild(previewItem);
+          
+          // Descargar automáticamente cada archivo
+          const link = document.createElement('a');
+          link.href = canvas.toDataURL();
+          link.download = `icon-${size}x${size}.png`;
+          link.click();
+          
+          // Pequeña pausa para no saturar
+          await new Promise(resolve => setTimeout(resolve, 200));
+        }
+        
+        URL.revokeObjectURL(url);
+        
+        // Mostrar éxito
+        successMessage.style.display = 'block';
+        preview.style.display = 'block';
+        downloadBtn.style.display = 'block';
+        btn.textContent = '✅ Íconos Generados Exitosamente';
+        btn.style.background = '#10b981';
+        
+        progressText.textContent = '¡Completado! 8 íconos generados y descargados.';
+        
+      } catch (error) {
+        console.error('Error:', error);
+        alert('❌ Error al generar los íconos: ' + error.message);
+        btn.disabled = false;
+        btn.textContent = '🚀 Generar Todos los Íconos PNG';
+        progress.style.display = 'none';
+      }
+    }
+    
+    function downloadAll() {
+      // Los archivos ya se descargaron automáticamente durante la generación
+      alert('✅ Los 8 archivos PNG ya fueron descargados.\n\nAhora cópialos manualmente a /public/icons/ de tu proyecto.');
+    }
+  </script>
+</body>
+</html>

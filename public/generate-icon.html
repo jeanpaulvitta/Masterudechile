@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Generador de Íconos Dinámico</title>
+</head>
+<body>
+  <canvas id="canvas" style="display:none;"></canvas>
+  
+  <script>
+    // Obtener el tamaño solicitado de la URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const size = parseInt(urlParams.get('size')) || 192;
+    
+    // Cargar el SVG del logo
+    async function generateIcon() {
+      try {
+        const response = await fetch('/icons/icon.svg');
+        const svgText = await response.text();
+        
+        const img = new Image();
+        const svgBlob = new Blob([svgText], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(svgBlob);
+        
+        img.onload = function() {
+          const canvas = document.getElementById('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext('2d');
+          
+          // Dibujar el logo redimensionado
+          ctx.drawImage(img, 0, 0, size, size);
+          
+          // Convertir a PNG y enviarlo como respuesta
+          canvas.toBlob(function(blob) {
+            // Crear un objeto URL temporal
+            const imageUrl = URL.createObjectURL(blob);
+            
+            // Redirigir a la imagen
+            window.location.href = imageUrl;
+          }, 'image/png');
+          
+          URL.revokeObjectURL(url);
+        };
+        
+        img.src = url;
+      } catch (error) {
+        console.error('Error generando ícono:', error);
+        document.body.innerHTML = '<h1>Error generando ícono</h1>';
+      }
+    }
+    
+    generateIcon();
+  </script>
+</body>
+</html>

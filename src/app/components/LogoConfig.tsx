@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import logoImage from 'figma:asset/f5fa508b6dd6458954cc36bcd7a8a3baa6d8e605.png';
 
 const LOGO_URL_KEY = 'natacion_master_logo_url';
 
@@ -54,12 +55,16 @@ export function LogoConfig({ className = '' }: LogoConfigProps) {
           {logoUrl && !logoError ? (
             <img
               src={logoUrl}
-              alt="Logo"
+              alt="Logo Master UCH"
               className="w-12 h-12 sm:w-16 sm:h-16 object-contain"
               onError={() => setLogoError(true)}
             />
           ) : (
-            <Waves className="w-12 h-12 sm:w-16 sm:h-16 text-blue-600" />
+            <img
+              src={logoImage}
+              alt="Logo Natación Master UCH"
+              className="w-12 h-12 sm:w-16 sm:h-16 object-contain"
+            />
           )}
         </div>
         

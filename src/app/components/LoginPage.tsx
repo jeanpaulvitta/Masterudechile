@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { debugListAllUsers } from '../services/auth';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import * as api from '../services/api';
+import logoImage from 'figma:asset/f5fa508b6dd6458954cc36bcd7a8a3baa6d8e605.png';
 
 const LOGO_URL_KEY = 'natacion_master_logo_url';
 
@@ -287,16 +288,20 @@ export function LoginPage() {
           </button>
 
           <div className="flex justify-center mb-4">
-            <div className="bg-white rounded-full p-6 shadow-2xl">
+            <div className="bg-white rounded-lg p-4 shadow-2xl">
               {logoUrl && !logoError ? (
                 <img
                   src={logoUrl}
-                  alt="Logo"
-                  className="w-16 h-16 object-contain"
+                  alt="Logo Master UCH"
+                  className="w-20 h-20 object-contain"
                   onError={() => setLogoError(true)}
                 />
               ) : (
-                <Waves className="w-16 h-16 text-blue-600" />
+                <img
+                  src={logoImage}
+                  alt="Logo Natación Master UCH"
+                  className="w-20 h-20 object-contain"
+                />
               )}
             </div>
           </div>

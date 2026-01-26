@@ -8,7 +8,7 @@
   "background_color": "#003366",
   "theme_color": "#003366",
   "orientation": "portrait-primary",
-  "categories": ["sports", "fitness"],
+  "categories": ["sports", "fitness", "health"],
   "dir": "ltr",
   "lang": "es",
   "icons": [
@@ -63,17 +63,25 @@
   ],
   "screenshots": [
     {
-      "src": "/icons/screenshot-mobile.png",
+      "src": "/icons/screenshot-1.png",
       "sizes": "540x720",
       "type": "image/png",
-      "form_factor": "narrow"
+      "form_factor": "narrow",
+      "label": "Vista principal de entrenamientos"
+    },
+    {
+      "src": "/icons/screenshot-2.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Calendario de entrenamientos"
     }
   ],
   "shortcuts": [
     {
-      "name": "Entrenamientos",
+      "name": "Ver Entrenamientos",
       "short_name": "Entrenos",
-      "description": "Ver entrenamientos del día",
+      "description": "Acceso rápido a los entrenamientos del día",
       "url": "/?section=entrenamientos",
       "icons": [
         {
@@ -84,10 +92,36 @@
       ]
     },
     {
-      "name": "Calendario",
+      "name": "Ver Calendario",
       "short_name": "Calendario",
-      "description": "Ver calendario de entrenamientos",
+      "description": "Ver calendario completo de entrenamientos",
       "url": "/?section=calendario",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Mis Récords",
+      "short_name": "Récords",
+      "description": "Ver récords personales y del equipo",
+      "url": "/?section=records",
+      "icons": [
+        {
+          "src": "/icons/icon-192x192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Asistencia",
+      "short_name": "Asistencia",
+      "description": "Registrar asistencia a entrenamientos",
+      "url": "/?section=asistencia",
       "icons": [
         {
           "src": "/icons/icon-192x192.png",
@@ -97,5 +131,22 @@
       ]
     }
   ],
-  "prefer_related_applications": false
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "share_target": {
+    "action": "/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+masteruch",
+      "url": "/?protocol=%s"
+    }
+  ]
 }

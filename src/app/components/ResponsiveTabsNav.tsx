@@ -1,7 +1,7 @@
 import { TabsList, TabsTrigger } from './ui/tabs';
 import { 
   Dumbbell, Calendar, Users, Medal, Clipboard, Crown, 
-  Award, ClipboardList, Shield, Settings 
+  Award, ClipboardList, Shield
 } from 'lucide-react';
 
 interface ResponsiveTabsNavProps {
@@ -16,7 +16,7 @@ export function ResponsiveTabsNav({ userRole }: ResponsiveTabsNavProps) {
         <TabsList className={`
           flex sm:grid w-full sm:w-full
           ${userRole === "admin" 
-            ? "sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-10" 
+            ? "sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-9" 
             : "sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-8"
           }
           gap-1.5 sm:gap-2 bg-transparent
@@ -230,29 +230,6 @@ export function ResponsiveTabsNav({ userRole }: ResponsiveTabsNavProps) {
               >
                 <Shield className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
                 <span className="text-[10px] sm:text-xs font-medium whitespace-nowrap">Usuarios</span>
-              </TabsTrigger>
-
-              {/* Pestaña: PWA */}
-              <TabsTrigger 
-                value="pwa" 
-                className="
-                  flex flex-col items-center justify-center
-                  gap-1 sm:gap-1.5
-                  py-2 sm:py-2.5 md:py-3
-                  px-3 sm:px-2 md:px-3
-                  min-w-[70px] sm:min-w-0
-                  rounded-md sm:rounded-lg
-                  transition-all duration-200
-                  data-[state=active]:bg-gray-700 
-                  data-[state=active]:text-white 
-                  data-[state=active]:shadow-md
-                  data-[state=active]:scale-[1.02]
-                  hover:bg-gray-50
-                  text-gray-700
-                "
-              >
-                <Settings className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
-                <span className="text-[10px] sm:text-xs font-medium whitespace-nowrap">PWA</span>
               </TabsTrigger>
             </>
           )}

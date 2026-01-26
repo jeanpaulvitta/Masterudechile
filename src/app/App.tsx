@@ -39,10 +39,8 @@ import { TestControlManager } from "./components/TestControlManager";
 import { UserManager } from "./components/UserManager";
 import { LogoConfig } from "./components/LogoConfig";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
-import { PWAGenerator } from "./components/PWAGenerator";
 import { Toaster } from "./components/ui/sonner";
 import { ResponsiveTabsNav } from "./components/ResponsiveTabsNav";
-import { PWADiagnostic } from "./components/PWADiagnostic";
 import type { Swimmer, Competition, SwimmerCompetition, PersonalBest, PersonalBestHistory, AttendanceRecord, SwimmerGoal } from "./data/swimmers";
 import type { Workout } from "./data/workouts";
 import type { Challenge } from "./data/challenges";
@@ -1236,12 +1234,6 @@ function MainApp() {
           {/* SECCIÓN 7: USUARIOS */}
           <TabsContent value="usuarios" className="space-y-8">
             <UserManager swimmers={swimmers} />
-          </TabsContent>
-
-          {/* SECCIÓN 8: GENERADOR PWA */}
-          <TabsContent value="pwa" className="space-y-8">
-            <PWADiagnostic />
-            <PWAGenerator />
           </TabsContent>
         </Tabs>
       </div>

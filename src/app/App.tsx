@@ -1039,7 +1039,7 @@ function MainApp() {
           <ResponsiveTabsNav userRole={user?.role} />
 
           {/* SECCIÓN 1: ENTRENAMIENTOS Y COMPETENCIAS */}
-          <TabsContent value="entrenamientos" className="space-y-6 sm:space-y-8 sm:pt-20 lg:pt-24 rounded-tl-[10px] rounded-tr-[0px] rounded-bl-[0px] rounded-br-[0px] p-[0px] mx-[0px] my-[50px]">
+          <TabsContent value="entrenamientos" className="space-y-6 sm:space-y-8 sm:pt-20 lg:pt-24 rounded-tl-[10px] rounded-tr-[0px] rounded-bl-[0px] rounded-br-[0px] p-[0px] mx-[0px] my-[30px]">
             {/* Mesociclos Overview */}
             <div>
               <div className="mb-6 sm:mb-8">

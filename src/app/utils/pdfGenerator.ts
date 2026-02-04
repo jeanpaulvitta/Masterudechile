@@ -4,6 +4,7 @@ import type { Swimmer, PersonalBest, AttendanceRecord } from '../data/swimmers';
 import type { Workout } from '../data/workouts';
 import type { Challenge } from '../data/challenges';
 import type { TestControl, TestResult } from '../data/testControl';
+import { trainingBlocks } from '../data/workouts2026-2027';
 
 // Función helper para calcular edad
 function calculateAge(dateOfBirth: string): number {
@@ -1234,7 +1235,7 @@ export function generateTrainingPacePDF(sessions: TrainingSession[]): void {
 
   yPos = (doc as any).lastAutoTable.finalY + 15;
 
-  // Distribución por Mesociclo
+  // Distribución por Bloques de Periodización
   if (yPos > 200) {
     doc.addPage();
     yPos = 20;
@@ -1242,35 +1243,36 @@ export function generateTrainingPacePDF(sessions: TrainingSession[]): void {
 
   doc.setFontSize(16);
   doc.setTextColor(0, 0, 0);
-  doc.text('Distribución por Mesociclo', 14, yPos);
+  doc.text('Distribución por Bloques de Periodización', 14, yPos);
   yPos += 10;
 
-  const mesociclos = ['Base', 'Desarrollo', 'Pre-competitivo', 'Competitivo'];
-  const mesocicloData = mesociclos.map(mesociclo => {
-    const mesoSessions = sessions.filter(s => s.mesociclo === mesociclo);
-    const mesoDistance = mesoSessions.reduce((sum, s) => sum + s.distance, 0);
-    const mesoAvg = mesoSessions.length > 0 ? Math.round(mesoDistance / mesoSessions.length) : 0;
+  const blockData = trainingBlocks.map(block => {
+    const blockSessions = sessions.filter(s => s.mesociclo === block.name);
+    const blockDistance = blockSessions.reduce((sum, s) => sum + s.distance, 0);
+    const blockAvg = blockSessions.length > 0 ? Math.round(blockDistance / blockSessions.length) : 0;
     
     return [
-      mesociclo,
-      mesoSessions.length.toString(),
-      `${(mesoDistance / 1000).toFixed(1)} km`,
-      `${mesoAvg} m`
+      `Bloque ${block.id}`,
+      block.name,
+      blockSessions.length.toString(),
+      `${(blockDistance / 1000).toFixed(1)} km`,
+      `${blockAvg} m`
     ];
   });
 
   autoTable(doc, {
     startY: yPos,
-    head: [['Mesociclo', 'Sesiones', 'Volumen Total', 'Promedio/Sesión']],
-    body: mesocicloData,
+    head: [['Bloque', 'Nombre', 'Sesiones', 'Volumen Total', 'Promedio/Sesión']],
+    body: blockData,
     theme: 'striped',
     styles: { fontSize: 9, cellPadding: 3 },
     headStyles: { fillColor: [0, 102, 204], textColor: 255 },
     columnStyles: {
-      0: { cellWidth: 60 },
-      1: { cellWidth: 30 },
-      2: { cellWidth: 35 },
-      3: { cellWidth: 45 }
+      0: { cellWidth: 25 },
+      1: { cellWidth: 60 },
+      2: { cellWidth: 25 },
+      3: { cellWidth: 30 },
+      4: { cellWidth: 35 }
     },
     margin: { left: 14, right: 14 },
   });
@@ -1383,8 +1385,8 @@ export function generateTrainingPacePDF(sessions: TrainingSession[]): void {
   doc.text('Progresión de Carga por Mesociclo', 14, yPos);
   yPos += 10;
 
-  const progressionData = mesociclos.map(mesociclo => {
-    const mesoSessions = sessions.filter(s => s.mesociclo === mesociclo);
+  const progressionData = trainingBlocks.map(block => {
+    const mesoSessions = sessions.filter(s => s.mesociclo === block.name);
     
     // Calcular volumen por intensidad
     const intensityVolumes: { [key: string]: number } = {
@@ -1404,7 +1406,7 @@ export function generateTrainingPacePDF(sessions: TrainingSession[]): void {
     const totalMesoDistance = Object.values(intensityVolumes).reduce((sum, v) => sum + v, 0);
     
     return [
-      mesociclo,
+      block.name,
       `${(intensityVolumes['Baja'] / 1000).toFixed(1)} km`,
       `${(intensityVolumes['Media'] / 1000).toFixed(1)} km`,
       `${(intensityVolumes['Alta'] / 1000).toFixed(1)} km`,
@@ -1439,7 +1441,7 @@ export function generateTrainingPacePDF(sessions: TrainingSession[]): void {
     yPos = 20;
   }
 
-  doc.setFontSize(14);
+  doc.setFontSize(16);
   doc.setTextColor(0, 102, 204);
   doc.text('Análisis de Técnica y Equipamiento', 14, yPos);
   yPos += 10;
@@ -1496,31 +1498,98 @@ export function generateTrainingPacePDF(sessions: TrainingSession[]): void {
     ? ((techniqueVolume / totalDistance) * 100).toFixed(1) 
     : '0.0';
 
-  const analysisData = [
-    ['Volumen en Técnica', `${(techniqueVolume / 1000).toFixed(1)} km`, `${techniquePercentage}%`, `${techniqueCount} sesiones`],
-    ['Pull Buoy', `${(equipmentVolumes['Pull Buoy'] / 1000).toFixed(1)} km`, '', ''],
-    ['Aletas', `${(equipmentVolumes['Aletas'] / 1000).toFixed(1)} km`, '', ''],
-    ['Paletas', `${(equipmentVolumes['Paletas'] / 1000).toFixed(1)} km`, '', ''],
-    ['Patada', `${(equipmentVolumes['Patada'] / 1000).toFixed(1)} km`, '', '']
+  // Tabla de Técnica
+  doc.setFontSize(14);
+  doc.setTextColor(0, 0, 0);
+  doc.text('Volumen en Técnica', 14, yPos);
+  yPos += 8;
+
+  const techniqueData = [
+    ['Volumen Total en Técnica', `${(techniqueVolume / 1000).toFixed(1)} km`],
+    ['Porcentaje del Total', `${techniquePercentage}%`],
+    ['Sesiones con Técnica', `${techniqueCount} de ${sessions.length}`],
   ];
 
   autoTable(doc, {
     startY: yPos,
-    head: [['Categoría', 'Volumen', '% Total', 'Info Adicional']],
-    body: analysisData,
-    theme: 'striped',
-    styles: { fontSize: 9, cellPadding: 3 },
-    headStyles: { fillColor: [0, 102, 204], textColor: 255 },
+    head: [],
+    body: techniqueData,
+    theme: 'grid',
+    styles: { fontSize: 10, cellPadding: 3 },
+    columnStyles: {
+      0: { fontStyle: 'bold', fillColor: [230, 247, 255], cellWidth: 70 },
+      1: { cellWidth: 110, halign: 'right', fontStyle: 'bold', textColor: [0, 102, 204] }
+    },
     margin: { left: 14, right: 14 },
   });
 
-  yPos = (doc as any).lastAutoTable.finalY + 10;
+  yPos = (doc as any).lastAutoTable.finalY + 15;
 
-  // Nota explicativa
+  // Verificar espacio para equipamiento
+  if (yPos > 200) {
+    doc.addPage();
+    yPos = 20;
+  }
+
+  // Tabla de Equipamiento
+  doc.setFontSize(14);
+  doc.setTextColor(0, 0, 0);
+  doc.text('Volumen por Equipamiento', 14, yPos);
+  yPos += 8;
+
+  // Calcular porcentajes para cada equipamiento
+  const equipmentData = Object.entries(equipmentVolumes)
+    .map(([equipment, volume]) => {
+      const percentage = totalDistance > 0 ? ((volume / totalDistance) * 100).toFixed(1) : '0.0';
+      return [equipment, volume, percentage];
+    })
+    .sort((a, b) => (b[1] as number) - (a[1] as number)); // Ordenar por volumen descendente
+
+  const equipmentTableData = equipmentData.map(([equipment, volume, percentage]) => [
+    equipment,
+    `${((volume as number) / 1000).toFixed(1)} km`,
+    `${percentage}%`,
+    // Barra visual de progreso
+    '▰'.repeat(Math.min(Math.floor((volume as number) / (totalDistance * 0.05)), 20))
+  ]);
+
+  autoTable(doc, {
+    startY: yPos,
+    head: [['Equipamiento', 'Volumen', '% Total', 'Distribución']],
+    body: equipmentTableData,
+    theme: 'striped',
+    styles: { fontSize: 10, cellPadding: 4 },
+    headStyles: { fillColor: [0, 102, 204], textColor: 255, fontStyle: 'bold' },
+    columnStyles: {
+      0: { cellWidth: 45, fontStyle: 'bold' },
+      1: { cellWidth: 35, halign: 'right', textColor: [0, 102, 204], fontStyle: 'bold' },
+      2: { cellWidth: 25, halign: 'center' },
+      3: { cellWidth: 70, textColor: [0, 153, 76], fontStyle: 'bold' }
+    },
+    margin: { left: 14, right: 14 },
+  });
+
+  yPos = (doc as any).lastAutoTable.finalY + 12;
+
+  // Resumen total de equipamiento
+  const totalEquipmentVolume = Object.values(equipmentVolumes).reduce((sum, v) => sum + v, 0);
+  const totalEquipmentPercentage = totalDistance > 0 
+    ? ((totalEquipmentVolume / totalDistance) * 100).toFixed(1) 
+    : '0.0';
+
+  doc.setFontSize(10);
+  doc.setTextColor(0, 153, 76);
+  doc.setFont(undefined, 'bold');
+  doc.text(`Total estimado con equipamiento: ${(totalEquipmentVolume / 1000).toFixed(1)} km (${totalEquipmentPercentage}%)`, 14, yPos);
+  doc.setFont(undefined, 'normal');
+  yPos += 10;
+
+  // Nota explicativa mejorada
   doc.setFontSize(8);
   doc.setTextColor(100, 100, 100);
   doc.setFont(undefined, 'italic');
-  const note = '* Los volúmenes de técnica y equipamiento son estimaciones basadas en palabras clave detectadas en las descripciones de entrenamientos';
+  const note = 'Nota: Los volúmenes son estimaciones basadas en palabras clave detectadas en las descripciones de entrenamientos. ' +
+               'Una sesión puede incluir múltiples tipos de equipamiento, por lo que la suma total puede exceder el 100%.';
   const noteLines = doc.splitTextToSize(note, pageWidth - 28);
   doc.text(noteLines, 14, yPos);
   doc.setFont(undefined, 'normal');

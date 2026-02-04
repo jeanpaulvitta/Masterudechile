@@ -324,78 +324,124 @@ export function TrainingStats({ sessions, mesociclo }: TrainingStatsProps) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-              {Object.entries(equipmentVolumes)
-                .map(([equipment, volume]) => {
-                  const Icon = getEquipmentIcon(equipment);
-                  const color = getEquipmentColor(equipment);
-                  const percentage = totalDistance > 0 
-                    ? Math.round((volume / totalDistance) * 100) 
-                    : 0;
-                  const sessionCount = equipmentSessionCount[equipment];
-                  const averagePerSession = sessionCount > 0 
-                    ? Math.round(volume / sessionCount) 
-                    : 0;
-                  
-                  return (
-                    <div 
-                      key={equipment} 
-                      className={`p-4 rounded-lg border-2 ${
-                        volume > 0 ? 'border-current' : 'border-gray-200'
-                      } ${volume > 0 ? color : 'bg-gray-50'} transition-all`}
-                    >
-                      <div className="flex items-center gap-2 mb-3">
-                        <Icon className={`w-5 h-5 ${volume > 0 ? color.split(' ')[0] : 'text-gray-400'}`} />
-                        <span className={`font-medium text-sm ${volume > 0 ? '' : 'text-gray-500'}`}>
-                          {equipment}
-                        </span>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="text-center">
-                          <p className={`text-2xl font-bold ${volume > 0 ? color.split(' ')[0] : 'text-gray-400'}`}>
-                            {volume > 0 ? (volume / 1000).toFixed(1) : '0.0'} km
+            <div className="space-y-6">
+              {/* Estadística principal - Total de equipamiento */}
+              {Object.values(equipmentVolumes).some(v => v > 0) && (
+                <div className="text-center p-6 bg-gradient-to-br from-indigo-50 to-purple-50 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-2">Volumen total con equipamiento</p>
+                  <p className="text-4xl font-bold text-indigo-600 mb-1">
+                    {(Object.values(equipmentVolumes).reduce((sum, v) => sum + v, 0) / 1000).toFixed(1)} km
+                  </p>
+                  <Badge variant="outline" className="mt-2">
+                    {totalDistance > 0 
+                      ? Math.round((Object.values(equipmentVolumes).reduce((sum, v) => sum + v, 0) / totalDistance) * 100) 
+                      : 0}% del total
+                  </Badge>
+                </div>
+              )}
+
+              {/* Tarjetas de equipamiento en grid 2x3 */}
+              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                {Object.entries(equipmentVolumes)
+                  // Ordenar por volumen de mayor a menor
+                  .sort(([, volumeA], [, volumeB]) => volumeB - volumeA)
+                  .map(([equipment, volume], index) => {
+                    const Icon = getEquipmentIcon(equipment);
+                    const color = getEquipmentColor(equipment);
+                    const percentage = totalDistance > 0 
+                      ? Math.round((volume / totalDistance) * 100) 
+                      : 0;
+                    const sessionCount = equipmentSessionCount[equipment];
+                    const averagePerSession = sessionCount > 0 
+                      ? Math.round(volume / sessionCount) 
+                      : 0;
+                    
+                    // Medalla para los top 3
+                    const getMedal = (idx: number) => {
+                      if (volume === 0) return null;
+                      if (idx === 0) return '🥇';
+                      if (idx === 1) return '🥈';
+                      if (idx === 2) return '🥉';
+                      return null;
+                    };
+                    
+                    const medal = getMedal(index);
+                    
+                    return (
+                      <div 
+                        key={equipment} 
+                        className={`relative p-3 rounded-lg border transition-all ${
+                          volume > 0 ? 'border-current' : 'border-gray-200'
+                        } ${volume > 0 ? color : 'bg-gray-50'}`}
+                      >
+                        {/* Medalla en esquina superior derecha */}
+                        {medal && (
+                          <div className="absolute -top-1 -right-1 text-lg">
+                            {medal}
+                          </div>
+                        )}
+                        
+                        {/* Header con icono y nombre */}
+                        <div className="flex items-center gap-2 mb-2">
+                          <Icon className={`w-4 h-4 flex-shrink-0 ${volume > 0 ? color.split(' ')[0] : 'text-gray-400'}`} />
+                          <p className={`text-xs font-medium truncate ${volume > 0 ? '' : 'text-gray-500'}`}>
+                            {equipment}
                           </p>
-                          {volume > 0 && (
-                            <Badge variant="outline" className="mt-1 text-xs">
-                              {percentage}% del total
-                            </Badge>
-                          )}
                         </div>
                         
-                        <div className="w-full bg-gray-200 rounded-full h-2">
+                        {/* Volumen */}
+                        <p className={`text-xl font-bold mb-1 ${volume > 0 ? color.split(' ')[0] : 'text-gray-400'}`}>
+                          {(volume / 1000).toFixed(1)} km
+                        </p>
+                        
+                        {/* Barra de progreso */}
+                        <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
                           <div
-                            className={`h-2 rounded-full transition-all ${volume > 0 ? color : ''}`}
-                            style={{ width: `${percentage}%` }}
+                            className={`h-1.5 rounded-full transition-all ${volume > 0 ? color : ''}`}
+                            style={{ width: `${Math.min(percentage, 100)}%` }}
                           />
                         </div>
-
-                        {/* Promedio por sesión */}
+                        
+                        {/* Porcentaje y sesiones */}
                         {volume > 0 && (
-                          <div className="pt-2 border-t border-gray-300">
-                            <p className="text-xs text-gray-600 text-center">
-                              {sessionCount} sesión{sessionCount !== 1 ? 'es' : ''}
-                            </p>
-                            <p className={`text-sm font-bold text-center ${color.split(' ')[0]}`}>
-                              ~{averagePerSession}m/sesión
-                            </p>
+                          <div className="mt-2 flex justify-between items-center">
+                            <p className="text-xs text-gray-600">{percentage}%</p>
+                            <p className="text-xs text-gray-600">{sessionCount} ses.</p>
                           </div>
                         )}
                       </div>
-                    </div>
-                  );
-                })}
-            </div>
-            
-            {Object.values(equipmentVolumes).every(v => v === 0) && (
-              <p className="text-sm text-gray-500 text-center py-4 mt-4 border-t">
-                No se detectó uso de equipamiento específico en las sesiones
+                    );
+                  })}
+              </div>
+
+              {/* Información adicional */}
+              <div className="grid grid-cols-2 gap-3 pt-2 border-t">
+                <div className="text-center p-3 bg-gray-50 rounded-lg">
+                  <p className="text-xs text-gray-600 mb-1">Tipos Usados</p>
+                  <p className="text-xl font-bold text-gray-800">
+                    {Object.values(equipmentVolumes).filter(v => v > 0).length}/5
+                  </p>
+                </div>
+                <div className="text-center p-3 bg-gray-50 rounded-lg">
+                  <p className="text-xs text-gray-600 mb-1">Sesiones</p>
+                  <p className="text-xl font-bold text-gray-800">
+                    {Math.max(...Object.values(equipmentSessionCount))}
+                  </p>
+                </div>
+              </div>
+
+              {/* Mensaje si no hay equipamiento */}
+              {Object.values(equipmentVolumes).every(v => v === 0) && (
+                <p className="text-sm text-gray-500 text-center py-4">
+                  No se detectó uso de equipamiento específico en las sesiones
+                </p>
+              )}
+              
+              {/* Nota explicativa */}
+              <p className="text-xs text-gray-500 text-center pt-2 border-t">
+                * Estimación basada en palabras clave detectadas en las descripciones
               </p>
-            )}
-            
-            <p className="text-xs text-gray-500 text-center pt-4 mt-4 border-t">
-              * Estimación basada en palabras clave detectadas en las descripciones de entrenamientos
-            </p>
+            </div>
           </CardContent>
         </Card>
       </div>

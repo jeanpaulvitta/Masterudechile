@@ -353,11 +353,22 @@ app.delete("/make-server-000a47d9/attendance/:id", async (c) => {
 // Get all competitions
 app.get("/make-server-000a47d9/competitions", async (c) => {
   try {
-    const competitions = await kv.get("competitions:list");
-    return c.json({ competitions: competitions || [] });
+    console.log("🏆 Fetching competitions...");
+    const competitions = await withTimeout(
+      kv.get("competitions:list"),
+      5000,
+      "Competitions fetch timeout"
+    ).catch(err => {
+      console.warn("⚠️ Competitions fetch error:", err);
+      return null;
+    });
+    
+    const result = competitions || [];
+    console.log(`✅ Competitions fetched: ${result.length} items`);
+    return c.json({ competitions: result });
   } catch (error) {
-    console.error("Error fetching competitions:", error);
-    return c.json({ error: "Failed to fetch competitions", details: String(error) }, 500);
+    console.error("❌ Error fetching competitions:", error);
+    return c.json({ competitions: [] });
   }
 });
 
@@ -449,10 +460,21 @@ app.put("/make-server-000a47d9/workouts/:id", async (c) => {
 app.delete("/make-server-000a47d9/workouts/:id", async (c) => {
   try {
     const id = c.req.param("id");
-    const workouts = await kv.get("workouts:list") || [];
+    console.log(`🗑️ Attempting to delete workout: ${id}`);
+    
+    // Get workouts with error handling
+    let workouts = [];
+    try {
+      workouts = await kv.get("workouts:list") || [];
+      console.log(`📊 Loaded ${workouts.length} workouts from KV store`);
+    } catch (kvError) {
+      console.error("❌ Error loading workouts from KV:", kvError);
+      return c.json({ error: "Failed to load workouts", details: String(kvError) }, 500);
+    }
     
     const index = workouts.findIndex((w: any) => w.id === id);
     if (index === -1) {
+      console.warn(`⚠️ Workout not found: ${id}`);
       return c.json({ error: "Workout not found" }, 404);
     }
     
@@ -463,12 +485,20 @@ app.delete("/make-server-000a47d9/workouts/:id", async (c) => {
       deletedAt: new Date().toISOString()
     };
     
-    await kv.set("workouts:list", workouts);
+    console.log(`💾 Saving ${workouts.length} workouts back to KV store...`);
     
-    console.log(`🗑️ Workout soft-deleted: ${id}`);
+    // Save with error handling
+    try {
+      await kv.set("workouts:list", workouts);
+      console.log(`✅ Workout soft-deleted successfully: ${id}`);
+    } catch (kvError) {
+      console.error("❌ Error saving workouts to KV:", kvError);
+      return c.json({ error: "Failed to save workout deletion", details: String(kvError) }, 500);
+    }
+    
     return c.json({ success: true, message: "Workout moved to trash" });
   } catch (error) {
-    console.error("Error deleting workout:", error);
+    console.error("❌ Unexpected error deleting workout:", error);
     return c.json({ error: "Failed to delete workout", details: String(error) }, 500);
   }
 });
@@ -524,16 +554,62 @@ app.delete("/make-server-000a47d9/workouts/:id/permanent", async (c) => {
   }
 });
 
+// Bulk delete workouts (permanently delete multiple by IDs)
+app.delete("/make-server-000a47d9/workouts/bulk-delete", async (c) => {
+  try {
+    const { ids } = await c.req.json();
+    
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return c.json({ error: "Invalid or empty IDs array" }, 400);
+    }
+    
+    console.log(`🗑️ Bulk delete request for ${ids.length} workouts`);
+    
+    const workouts = await kv.get("workouts:list") || [];
+    const filteredWorkouts = workouts.filter((w: any) => !ids.includes(w.id));
+    
+    const deletedCount = workouts.length - filteredWorkouts.length;
+    
+    await kv.set("workouts:list", filteredWorkouts);
+    
+    console.log(`✅ Bulk deleted ${deletedCount} workouts permanently`);
+    return c.json({ 
+      success: true, 
+      message: `${deletedCount} workouts permanently deleted`,
+      deletedCount 
+    });
+  } catch (error) {
+    console.error("Error in bulk delete:", error);
+    return c.json({ error: "Failed to bulk delete workouts", details: String(error) }, 500);
+  }
+});
+
 // ==================== CHALLENGES ROUTES ====================
 
 // Get all challenges
 app.get("/make-server-000a47d9/challenges", async (c) => {
   try {
-    const challenges = await kv.get("challenges:list");
-    return c.json({ challenges: challenges || [] });
+    console.log("🎯 Fetching challenges...");
+    
+    // Intentar obtener challenges con timeout más largo
+    const challenges = await withTimeout(
+      kv.get("challenges:list"),
+      10000, // Aumentar timeout a 10 segundos
+      "Challenges fetch timeout"
+    ).catch(err => {
+      console.warn("⚠️ Challenges fetch error (returning empty array):", err);
+      return [];
+    });
+    
+    // Asegurar que siempre sea un array
+    const result = Array.isArray(challenges) ? challenges : [];
+    console.log(`✅ Challenges fetched: ${result.length} items`);
+    
+    return c.json({ challenges: result }, 200);
   } catch (error) {
-    console.error("Error fetching challenges:", error);
-    return c.json({ error: "Failed to fetch challenges", details: String(error) }, 500);
+    console.error("❌ Error fetching challenges (returning empty array):", error);
+    // Siempre devolver 200 con array vacío en lugar de error 500
+    return c.json({ challenges: [] }, 200);
   }
 });
 
@@ -683,11 +759,22 @@ app.delete("/make-server-000a47d9/competitions/:id", async (c) => {
 // Get all swimmer competition participations
 app.get("/make-server-000a47d9/swimmer-competitions", async (c) => {
   try {
-    const participations = await kv.get("swimmer_competitions:list");
-    return c.json({ participations: participations || [] });
+    console.log("🏅 Fetching swimmer competitions...");
+    const participations = await withTimeout(
+      kv.get("swimmer_competitions:list"),
+      5000,
+      "Swimmer competitions fetch timeout"
+    ).catch(err => {
+      console.warn("⚠️ Swimmer competitions fetch error:", err);
+      return null;
+    });
+    
+    const result = participations || [];
+    console.log(`✅ Swimmer competitions fetched: ${result.length} items`);
+    return c.json({ participations: result });
   } catch (error) {
-    console.error("Error fetching swimmer competitions:", error);
-    return c.json({ error: "Failed to fetch swimmer competitions", details: String(error) }, 500);
+    console.error("❌ Error fetching swimmer competitions:", error);
+    return c.json({ participations: [] });
   }
 });
 
@@ -958,11 +1045,27 @@ app.post("/make-server-000a47d9/competition-results", async (c) => {
 // Get all holidays
 app.get("/make-server-000a47d9/holidays", async (c) => {
   try {
-    const holidays = await kv.get("holidays:list");
-    return c.json({ holidays: holidays || [] });
+    console.log("📅 Fetching holidays...");
+    
+    // Intentar obtener holidays con timeout más largo
+    const holidays = await withTimeout(
+      kv.get("holidays:list"),
+      10000, // Aumentar timeout a 10 segundos
+      "Holidays fetch timeout"
+    ).catch(err => {
+      console.warn("⚠️ Holidays fetch error (returning empty array):", err);
+      return [];
+    });
+    
+    // Asegurar que siempre sea un array
+    const result = Array.isArray(holidays) ? holidays : [];
+    console.log(`✅ Holidays fetched: ${result.length} items`);
+    
+    return c.json({ holidays: result }, 200);
   } catch (error) {
-    console.error("Error fetching holidays:", error);
-    return c.json({ error: "Failed to fetch holidays", details: String(error) }, 500);
+    console.error("❌ Error fetching holidays (returning empty array):", error);
+    // Siempre devolver 200 con array vacío en lugar de error 500
+    return c.json({ holidays: [] }, 200);
   }
 });
 
@@ -1035,11 +1138,26 @@ app.delete("/make-server-000a47d9/holidays/:id", async (c) => {
 // Get all test controls
 app.get("/make-server-000a47d9/test-controls", async (c) => {
   try {
-    const testControls = await kv.get("test-controls:list");
-    return c.json({ testControls: testControls || [] });
+    console.log("📋 Fetching test controls...");
+    
+    // Add timeout to prevent hanging
+    const testControls = await withTimeout(
+      kv.get("test-controls:list"),
+      5000,
+      "Test controls fetch timeout"
+    ).catch(err => {
+      console.warn("⚠️ Test controls fetch error:", err);
+      return null;
+    });
+    
+    const result = testControls || [];
+    console.log(`✅ Test controls fetched: ${result.length} items`);
+    
+    return c.json({ testControls: result });
   } catch (error) {
-    console.error("Error fetching test controls:", error);
-    return c.json({ error: "Failed to fetch test controls", details: String(error) }, 500);
+    console.error("❌ Error fetching test controls:", error);
+    // Return empty array instead of error to not block app loading
+    return c.json({ testControls: [] });
   }
 });
 
@@ -1140,11 +1258,25 @@ app.delete("/make-server-000a47d9/test-controls/:id", async (c) => {
 // Get all test results
 app.get("/make-server-000a47d9/test-results", async (c) => {
   try {
-    const testResults = await kv.get("test-results:list");
-    return c.json({ testResults: testResults || [] });
+    console.log("📋 Fetching test results...");
+    
+    // Simplify: just get the data without extra timeout wrapper
+    let testResults = [];
+    try {
+      const data = await kv.get("test-results:list");
+      testResults = data || [];
+    } catch (kvError) {
+      console.warn("⚠️ KV error fetching test results, returning empty array:", kvError);
+      testResults = [];
+    }
+    
+    console.log(`✅ Test results fetched: ${testResults.length} items`);
+    
+    return c.json({ testResults });
   } catch (error) {
-    console.error("Error fetching test results:", error);
-    return c.json({ error: "Failed to fetch test results", details: String(error) }, 500);
+    console.error("❌ Error fetching test results:", error);
+    // Return empty array instead of error to not block app loading
+    return c.json({ testResults: [] });
   }
 });
 

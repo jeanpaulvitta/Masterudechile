@@ -23,6 +23,7 @@ type SessionType = {
   description?: string;
   focus?: string;
   estimatedTime?: number;
+  schedule?: 'AM' | 'PM';
 };
 
 interface MesocicloDialogProps {
@@ -30,8 +31,13 @@ interface MesocicloDialogProps {
     name: string;
     weeks: number;
     description: string;
+    objective?: string;
+    startDate?: string;
+    endDate?: string;
     icon: typeof Target;
     color: string;
+    bgColor?: string;
+    borderColor?: string;
   };
   sessions: SessionType[];
 }
@@ -40,8 +46,40 @@ export function MesocicloDialog({ mesociclo, sessions }: MesocicloDialogProps) {
   const [open, setOpen] = useState(false);
   const Icon = mesociclo.icon;
 
-  // Filtrar sesiones por mesociclo
-  const mesocicloSessions = sessions.filter(s => s.mesociclo === mesociclo.name);
+  // Mapeo de bloques a rangos de semanas
+  const blockRanges = [
+    { name: "Base técnica + aeróbica", weekStart: 1, weekEnd: 6 },           // Bloque 1
+    { name: "Intensificación + velocidad", weekStart: 7, weekEnd: 13 },      // Bloque 2
+    { name: "Potencia + competencia", weekStart: 14, weekEnd: 19 },          // Bloque 3
+    { name: "Reacumulación + técnica", weekStart: 20, weekEnd: 24 },         // Bloque 4
+    { name: "Intensificación 2", weekStart: 25, weekEnd: 32 },               // Bloque 5
+    { name: "Mantenimiento competitivo", weekStart: 33, weekEnd: 38 },       // Bloque 6
+    { name: "Taper final", weekStart: 39, weekEnd: 44 },                     // Bloque 7
+  ];
+
+  // Encontrar el rango de semanas para este mesociclo
+  const currentBlock = blockRanges.find(block => block.name === mesociclo.name);
+  
+  // Filtrar sesiones por mesociclo (buscar por nombre exacto O por rango de semanas)
+  const mesocicloSessions = sessions.filter(s => {
+    // Método 1: Por nombre exacto (para entrenamientos antiguos)
+    if (s.mesociclo === mesociclo.name) return true;
+    
+    // Método 2: Por rango de semanas (para entrenamientos nuevos con "Bloque X")
+    if (currentBlock && s.week >= currentBlock.weekStart && s.week <= currentBlock.weekEnd) {
+      return true;
+    }
+    
+    // Método 3: Buscar si el mesociclo contiene "Bloque X" donde X corresponde al índice
+    const blockMatch = s.mesociclo?.match(/Bloque (\d+)/);
+    if (blockMatch && currentBlock) {
+      const blockNumber = parseInt(blockMatch[1]);
+      const blockIndex = blockRanges.findIndex(b => b.name === mesociclo.name);
+      if (blockNumber === blockIndex + 1) return true;
+    }
+    
+    return false;
+  });
   
   // Agrupar por semana
   const sessionsByWeek: { [key: number]: SessionType[] } = {};
@@ -50,6 +88,33 @@ export function MesocicloDialog({ mesociclo, sessions }: MesocicloDialogProps) {
       sessionsByWeek[session.week] = [];
     }
     sessionsByWeek[session.week].push(session);
+  });
+
+  // Ordenar las sesiones dentro de cada semana (Lunes, Miércoles, Viernes, Sábado)
+  Object.keys(sessionsByWeek).forEach((weekKey) => {
+    const dayOrder: { [key: string]: number } = {
+      'Lunes': 1,
+      'Martes': 2,
+      'Miércoles': 3,
+      'Jueves': 4,
+      'Viernes': 5,
+      'Sábado': 6,
+      'Domingo': 7
+    };
+    
+    sessionsByWeek[Number(weekKey)].sort((a, b) => {
+      // Ordenar por día de la semana
+      const dayComparison = (dayOrder[a.day] || 0) - (dayOrder[b.day] || 0);
+      if (dayComparison !== 0) return dayComparison;
+      
+      // Si es el mismo día, ordenar por horario (AM antes que PM)
+      const scheduleA = (a as any).schedule || 'AM';
+      const scheduleB = (b as any).schedule || 'AM';
+      if (scheduleA === 'AM' && scheduleB === 'PM') return -1;
+      if (scheduleA === 'PM' && scheduleB === 'AM') return 1;
+      
+      return 0;
+    });
   });
 
   // Calcular estadísticas
@@ -63,18 +128,43 @@ export function MesocicloDialog({ mesociclo, sessions }: MesocicloDialogProps) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <div>
-          <Card className="hover:shadow-lg transition-all cursor-pointer hover:scale-105">
-            <CardContent className="pt-6">
-              <div className="flex items-start gap-3">
-                <Icon className={`w-6 h-6 ${mesociclo.color}`} />
+          <Card className={`hover:shadow-lg transition-all cursor-pointer hover:scale-[1.02] ${mesociclo.bgColor || 'bg-white'} ${mesociclo.borderColor ? `border-2 ${mesociclo.borderColor}` : ''}`}>
+            <CardContent className="pt-6 pb-4">
+              <div className="flex items-start gap-3 mb-3">
+                <div className={`p-2 rounded-lg ${mesociclo.bgColor || 'bg-gray-50'}`}>
+                  <Icon className={`w-6 h-6 ${mesociclo.color}`} />
+                </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold mb-1">{mesociclo.name}</h3>
-                  <p className="text-sm text-gray-600 mb-2">
+                  <h3 className="font-bold text-lg mb-1">{mesociclo.name}</h3>
+                  <p className="text-xs text-gray-600 mb-2">
                     {mesociclo.description}
                   </p>
+                </div>
+              </div>
+              
+              {/* Información adicional */}
+              <div className="space-y-2 border-t pt-3">
+                {mesociclo.objective && (
+                  <div className="flex items-start gap-2">
+                    <span className="text-xs font-medium text-gray-500">Foco técnico:</span>
+                    <span className="text-xs text-gray-700 italic">{mesociclo.objective}</span>
+                  </div>
+                )}
+                
+                {mesociclo.startDate && mesociclo.endDate && (
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline">{mesociclo.weeks} semanas</Badge>
-                    <ChevronRight className="w-4 h-4 text-gray-400" />
+                    <span className="text-xs font-medium text-gray-500">Fechas:</span>
+                    <span className="text-xs text-gray-700">{mesociclo.startDate} - {mesociclo.endDate}</span>
+                  </div>
+                )}
+                
+                <div className="flex items-center justify-between gap-2 pt-2">
+                  <Badge variant="outline" className={`${mesociclo.color}`}>
+                    {mesociclo.weeks} semanas
+                  </Badge>
+                  <div className="flex items-center gap-1 text-gray-400">
+                    <span className="text-xs">Ver detalles</span>
+                    <ChevronRight className="w-3 h-3" />
                   </div>
                 </div>
               </div>
@@ -84,36 +174,61 @@ export function MesocicloDialog({ mesociclo, sessions }: MesocicloDialogProps) {
       </DialogTrigger>
       <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center gap-3">
-            <Icon className={`w-8 h-8 ${mesociclo.color}`} />
-            <div>
-              <DialogTitle className="text-2xl">{mesociclo.name}</DialogTitle>
+          <div className="flex items-center gap-3 mb-2">
+            <div className={`p-3 rounded-lg ${mesociclo.bgColor || 'bg-gray-50'}`}>
+              <Icon className={`w-8 h-8 ${mesociclo.color}`} />
+            </div>
+            <div className="flex-1">
+              <DialogTitle className="text-2xl font-bold">{mesociclo.name}</DialogTitle>
               <DialogDescription className="text-sm text-gray-600 mt-1">
                 {mesociclo.description}
               </DialogDescription>
             </div>
           </div>
+          
+          {/* Información del bloque */}
+          <div className={`${mesociclo.bgColor} border ${mesociclo.borderColor} rounded-lg p-4 space-y-2`}>
+            {mesociclo.objective && (
+              <div className="flex items-start gap-2">
+                <span className="text-sm font-semibold text-gray-700">🎯 Foco técnico:</span>
+                <span className="text-sm text-gray-600 italic">{mesociclo.objective}</span>
+              </div>
+            )}
+            
+            {mesociclo.startDate && mesociclo.endDate && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-gray-700">📅 Periodo:</span>
+                <span className="text-sm text-gray-600">{mesociclo.startDate} - {mesociclo.endDate}</span>
+              </div>
+            )}
+            
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-gray-700">⏱️ Duración:</span>
+              <span className="text-sm text-gray-600">{mesociclo.weeks} semanas</span>
+            </div>
+          </div>
         </DialogHeader>
 
         {/* Estadísticas del mesociclo */}
-        <Card className="bg-gradient-to-r from-blue-50 to-purple-50">
+        <Card className={`${mesociclo.bgColor} border ${mesociclo.borderColor}`}>
           <CardContent className="pt-6">
+            <h3 className="text-sm font-semibold text-gray-700 mb-4">📊 Estadísticas del Bloque</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <p className="text-sm text-gray-600">Entrenamientos</p>
-                <p className="text-2xl font-bold">{totalWorkouts}</p>
+              <div className="bg-white/80 rounded-lg p-3">
+                <p className="text-xs text-gray-600">Entrenamientos</p>
+                <p className="text-2xl font-bold text-gray-900">{totalWorkouts}</p>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Desafíos</p>
-                <p className="text-2xl font-bold">{totalChallenges}</p>
+              <div className="bg-white/80 rounded-lg p-3">
+                <p className="text-xs text-gray-600">Desafíos</p>
+                <p className="text-2xl font-bold text-gray-900">{totalChallenges}</p>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Distancia Total</p>
-                <p className="text-2xl font-bold">{(totalDistance / 1000).toFixed(1)} km</p>
+              <div className="bg-white/80 rounded-lg p-3">
+                <p className="text-xs text-gray-600">Distancia Total</p>
+                <p className="text-2xl font-bold text-gray-900">{(totalDistance / 1000).toFixed(1)} km</p>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Promedio/Sesión</p>
-                <p className="text-2xl font-bold">{avgDistance}m</p>
+              <div className="bg-white/80 rounded-lg p-3">
+                <p className="text-xs text-gray-600">Promedio/Sesión</p>
+                <p className="text-2xl font-bold text-gray-900">{avgDistance}m</p>
               </div>
             </div>
           </CardContent>
@@ -165,7 +280,7 @@ export function MesocicloDialog({ mesociclo, sessions }: MesocicloDialogProps) {
                         )}
                         <div className="text-center">
                           <p className="text-gray-600">Distancia</p>
-                          <p className="font-bold">{weekDistance}m</p>
+                          <p className="font-bold">{(weekDistance / 1000).toFixed(1)}km</p>
                         </div>
                       </div>
                     </div>

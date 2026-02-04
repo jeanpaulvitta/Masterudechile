@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { AddCompetitionDialog } from "./AddCompetitionDialog";
 import { EditCompetitionDialog } from "./EditCompetitionDialog";
+import { CompetitionBulkLoader } from "./CompetitionBulkLoader";
 import type { Competition } from "../data/swimmers";
 
 interface CompetitionManagerProps {
@@ -177,6 +178,11 @@ export function CompetitionManager({
           </CardContent>
         </Card>
       </div>
+
+      {/* Bulk Loader - Solo mostrar si no hay competencias o hay pocas */}
+      {competitions.length < 5 && (
+        <CompetitionBulkLoader onAddCompetition={onAddCompetition} />
+      )}
 
       {/* Search */}
       {competitions.length > 0 && (

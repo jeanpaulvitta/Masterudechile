@@ -2,6 +2,7 @@
 import * as api from "./services/api";
 import { syncWorkoutsFromLocal } from "./handlers/syncWorkouts";
 import { isTeamRecord } from "./utils/recordsUtils";
+import { workouts2026_2027 } from "./data/workouts2026-2027";
 import { calculateAge, calculateMasterCategory } from "./utils/swimmerUtils";
 import { useState, useEffect } from "react";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
@@ -21,7 +22,6 @@ import { AttendanceTracker } from "./components/AttendanceTracker";
 import { TeamRecordsBoard } from "./components/TeamRecordsBoard";
 import { StatsAnalyticsDashboard } from "./components/StatsAnalyticsDashboard";
 import { MesocicloDialog } from "./components/MesocicloDialog";
-import { TrainingVolumeCharts } from "./components/TrainingVolumeCharts";
 import { TrainingStats } from "./components/TrainingStats";
 import { CompetitionManager } from "./components/CompetitionManager";
 import { SwimmersStats } from "./components/SwimmersStats";
@@ -34,6 +34,8 @@ import { UserMenu } from "./components/UserMenu";
 import { UnifiedCalendarManager } from "./components/UnifiedCalendarManager";
 import { HolidayManager } from "./components/HolidayManager";
 import { TrashManager } from "./components/TrashManager";
+import { DuplicateWorkoutsFinder } from "./components/DuplicateWorkoutsFinder";
+import { AdvancedDuplicateCleaner } from "./components/AdvancedDuplicateCleaner";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { TestControlManager } from "./components/TestControlManager";
 import { UserManager } from "./components/UserManager";
@@ -65,6 +67,21 @@ function timeToSeconds(time: string): number {
 
 function MainApp() {
   const { user } = useAuth(); // Obtener usuario autenticado
+  
+  // 🔍 DEBUG: Verificar entrenamientos del archivo local
+  console.log('📅 VERIFICACIÓN ARCHIVO LOCAL:');
+  console.log(`  Total entrenamientos en archivo: ${defaultWorkouts.length}`);
+  const agostoWorkouts = defaultWorkouts.filter(w => w.date.toLowerCase().includes('agosto'));
+  console.log(`  🔍 Entrenamientos de AGOSTO en archivo: ${agostoWorkouts.length}`);
+  if (agostoWorkouts.length > 0) {
+    console.log(`  📋 Ejemplos AGOSTO:`, agostoWorkouts.slice(0, 5).map(w => ({
+      week: w.week,
+      date: w.date,
+      day: w.day,
+      schedule: w.schedule
+    })));
+  }
+  
   const [swimmers, setSwimmers] = useState<Swimmer[]>([]);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [swimmerCompetitions, setSwimmerCompetitions] = useState<SwimmerCompetition[]>([]);
@@ -133,9 +150,33 @@ function MainApp() {
       setCompetitions(competitionsData);
       setSwimmerCompetitions(participationsData);
       
-      // Cargar entrenamientos - usar los que vienen de la BD
+      // Cargar entrenamientos - usar datos locales si BD está vacía
       console.log('📊 Entrenamientos cargados desde BD:', workoutsData.length);
-      setWorkouts(workoutsData);
+      if (workoutsData.length === 0 && workouts2026_2027.length > 0) {
+        console.log('⚠️ BD vacía - cargando y sincronizando entrenamientos desde archivo local (workouts2026-2027.ts)');
+        console.log('📦 Entrenamientos locales:', workouts2026_2027.length);
+        
+        // Sincronizar automáticamente a la base de datos
+        try {
+          console.log('🔄 Sincronizando entrenamientos a la base de datos...');
+          
+          // Agregar nuevos entrenamientos
+          const addedWorkouts = [];
+          for (const workout of workouts2026_2027) {
+            const added = await api.addWorkout(workout);
+            addedWorkouts.push(added);
+          }
+          
+          console.log(`✅ ${addedWorkouts.length} entrenamientos sincronizados a la BD`);
+          setWorkouts(addedWorkouts);
+        } catch (syncError) {
+          console.error('❌ Error sincronizando entrenamientos:', syncError);
+          // Si falla la sincronización, usar datos locales
+          setWorkouts(workouts2026_2027 as Workout[]);
+        }
+      } else {
+        setWorkouts(workoutsData);
+      }
       
       // Cargar desafíos - usar los que vienen de la BD
       console.log('📊 Desafíos cargados desde BD:', challengesData.length);
@@ -457,7 +498,9 @@ function MainApp() {
     }
   };
 
-  const handleSyncFromLocal = () => syncWorkoutsFromLocal(workouts, setWorkouts);
+  const handleSyncFromLocal = () => syncWorkoutsFromLocal(workouts, setWorkouts, false);
+  
+  const handleForceSyncFromLocal = () => syncWorkoutsFromLocal(workouts, setWorkouts, true);
 
   const handleSyncFebruary = () => syncFebruaryWorkouts(workouts, setWorkouts);
 
@@ -718,8 +761,18 @@ function MainApp() {
       const month = monthMap[monthName];
       
       if (month !== undefined) {
-        // Crear fecha con año 2026
-        const date = new Date(2026, month, day);
+        // Determinar el año correcto basándose en la semana
+        // La temporada va de marzo 2026 (semana 1) a enero 2027 (semana 44)
+        // Semanas 1-43: 2026, Semanas 44+: 2027
+        // También: si el mes es enero o febrero, debe ser 2027
+        let year = 2026;
+        if (month === 0 || month === 1) { // enero o febrero
+          year = 2027;
+        } else if (week >= 44) {
+          year = 2027;
+        }
+        
+        const date = new Date(year, month, day);
         return date.toISOString().split('T')[0];
       }
     }
@@ -822,39 +875,88 @@ function MainApp() {
 
   const mesocicloStats = [
     {
-      name: "Mantenimiento",
-      weeks: 4,
-      description: "Periodo de acondicionamiento previo al inicio de temporada",
-      icon: Activity,
-      color: "text-green-600",
-    },
-    {
-      name: "Base",
-      weeks: 5,
-      description: "Construcción de resistencia aeróbica",
+      name: "Base técnica + aeróbica",
+      weeks: 6,
+      description: "Eficiencia técnica + capacidad aeróbica",
+      objective: "Subacuáticos + alineación corporal",
+      startDate: "2 marzo",
+      endDate: "10 abril",
       icon: Target,
       color: "text-blue-600",
+      bgColor: "bg-blue-50",
+      borderColor: "border-blue-200",
     },
     {
-      name: "Desarrollo",
-      weeks: 5,
-      description: "Aumento de intensidad y velocidad",
+      name: "Intensificación + velocidad",
+      weeks: 7,
+      description: "Primer peak → Copa Ñuñoa + Santiago Deporte",
+      objective: "Frecuencia de brazada + salida de virajes",
+      startDate: "13 abril",
+      endDate: "29 mayo",
       icon: TrendingUp,
-      color: "text-purple-600",
-    },
-    {
-      name: "Pre-competitivo",
-      weeks: 5,
-      description: "Trabajo específico de competencia",
-      icon: CalendarDays,
-      color: "text-orange-600",
-    },
-    {
-      name: "Competitivo",
-      weeks: 5,
-      description: "Puesta a punto y campeonato",
-      icon: Trophy,
       color: "text-red-600",
+      bgColor: "bg-red-50",
+      borderColor: "border-red-200",
+    },
+    {
+      name: "Potencia + competencia",
+      weeks: 6,
+      description: "Peak → Nacional Invierno",
+      objective: "Potencia de patada",
+      startDate: "1 junio",
+      endDate: "10 julio",
+      icon: Trophy,
+      color: "text-purple-600",
+      bgColor: "bg-purple-50",
+      borderColor: "border-purple-200",
+    },
+    {
+      name: "Reacumulación + técnica",
+      weeks: 5,
+      description: "Rebase técnico",
+      objective: "Eficiencia energética",
+      startDate: "13 julio",
+      endDate: "14 agosto",
+      icon: Activity,
+      color: "text-green-600",
+      bgColor: "bg-green-50",
+      borderColor: "border-green-200",
+    },
+    {
+      name: "Intensificación 2",
+      weeks: 8,
+      description: "Peak múltiple: LQBLO + Aguas Abiertas + Panamericano",
+      objective: "Velocidad específica de prueba",
+      startDate: "17 agosto",
+      endDate: "9 octubre",
+      icon: TrendingUp,
+      color: "text-red-600",
+      bgColor: "bg-red-50",
+      borderColor: "border-red-200",
+    },
+    {
+      name: "Mantenimiento competitivo",
+      weeks: 6,
+      description: "Peak: Arica + Recoleta",
+      objective: "Calidad técnica bajo fatiga",
+      startDate: "12 octubre",
+      endDate: "20 noviembre",
+      icon: CalendarDays,
+      color: "text-yellow-600",
+      bgColor: "bg-yellow-50",
+      borderColor: "border-yellow-200",
+    },
+    {
+      name: "Taper final",
+      weeks: 6,
+      description: "Peak final: Nacional Master",
+      objective: "Precisión y ritmo de competencia",
+      startDate: "23 noviembre",
+      endDate: "2 enero 2027",
+      icon: Trophy,
+      color: "text-blue-600",
+      bgColor: "bg-blue-50",
+      borderColor: "border-blue-200",
     },
   ];
 
@@ -875,8 +977,12 @@ function MainApp() {
           </div>
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-4 mt-4 sm:mt-6">
             <div className="bg-white/10 backdrop-blur-sm rounded-lg px-2 sm:px-4 py-1.5 sm:py-2 border border-white/20">
-              <p className="text-xs sm:text-sm text-blue-200"> 1er Semestre 2026</p>
-              <p className="font-semibold text-xs sm:text-base">2 Mar - 20 Jul</p>
+              <p className="text-xs sm:text-sm text-blue-200">🗓️ Temporada 2026-2027</p>
+              <p className="font-semibold text-xs sm:text-base">Mar 2026 - Ene 2027</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-sm rounded-lg px-2 sm:px-4 py-1.5 sm:py-2 border border-white/20">
+              <p className="text-xs sm:text-sm text-blue-200">📊 Macrociclo</p>
+              <p className="font-semibold text-xs sm:text-base">44 semanas | 7 bloques</p>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-lg px-2 sm:px-4 py-1.5 sm:py-2 border border-white/20">
               <p className="text-xs sm:text-sm text-blue-200">Entrenamientos</p>
@@ -904,15 +1010,27 @@ function MainApp() {
           <TabsContent value="entrenamientos" className="space-y-8">
             {/* Mesociclos Overview */}
             <div>
-              <h2 className="text-2xl font-bold mb-4">Estructura de la Temporada</h2>
-              <p className="text-gray-600 mb-6">Haz clic en cada mesociclo para ver las semanas y entrenamientos detallados</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {mesocicloStats.map((mesociclo) => (
-                  <MesocicloDialog
-                    key={mesociclo.name}
-                    mesociclo={mesociclo}
-                    sessions={allSessions}
-                  />
+              <div className="mb-6">
+                <h2 className="text-3xl font-bold mb-2">📅 Temporada 2026-2027</h2>
+                <p className="text-gray-600">
+                  Macrociclo completo de 44 semanas | Marzo 2026 - Enero 2027 | Periodización ondulante
+                </p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Haz clic en cada bloque para ver entrenamientos detallados por semana
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+                {mesocicloStats.map((mesociclo, index) => (
+                  <div key={mesociclo.name} className="relative">
+                    {/* Número del bloque */}
+                    <div className={`absolute -top-2 -left-2 z-10 w-8 h-8 rounded-full ${mesociclo.bgColor} border-2 ${mesociclo.borderColor} flex items-center justify-center font-bold text-sm shadow-sm`}>
+                      {index + 1}
+                    </div>
+                    <MesocicloDialog
+                      mesociclo={mesociclo}
+                      sessions={allSessions}
+                    />
+                  </div>
                 ))}
               </div>
             </div>
@@ -931,7 +1049,14 @@ function MainApp() {
                   onEditChallenge={handleEditChallenge}
                   onDeleteChallenge={handleDeleteChallenge}
                   onSyncFromLocal={handleSyncFromLocal}
+                  onForceSyncFromLocal={handleForceSyncFromLocal}
                 />
+
+                {/* Limpiador Avanzado de Duplicados */}
+                <AdvancedDuplicateCleaner />
+
+                {/* Detector de Duplicados (Modo Manual) */}
+                <DuplicateWorkoutsFinder />
 
                 {/* Gestión de Días Feriados */}
                 <HolidayManager
@@ -948,38 +1073,9 @@ function MainApp() {
 
             {/* Estadísticas de Entrenamiento */}
             <div>
-              <h2 className="text-2xl font-bold mb-4">Análisis de Volumen de Entrenamiento</h2>
-              <TrainingVolumeCharts sessions={allSessions} />
-            </div>
-
-            {/* Estadísticas de Entrenamiento */}
-            <div>
               <h2 className="text-2xl font-bold mb-4">Estadísticas de Entrenamiento</h2>
               <TrainingStats sessions={allSessions} />
             </div>
-
-            {/* Objetivo del campeonato */}
-            <Card className="mt-8 bg-gradient-to-r from-red-50 to-orange-50 border-2 border-red-200">
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-4">
-                  <Trophy className="w-8 h-8 text-red-600" />
-                  <div>
-                    <h3 className="text-xl font-bold mb-2">
-                      Campeonato Nacional Master 2026
-                    </h3>
-                    <p className="text-gray-700 mb-2">
-                      <strong>Fecha:</strong> Semana del 20 de julio de 2026
-                    </p>
-                    <p className="text-gray-700">
-                      Después de 20 semanas de preparación sistemática, estaremos listos
-                      para competir al más alto nivel. La progresión desde 1500m hasta
-                      2500m y la periodización en mesociclos garantiza una puesta a punto
-                      óptima.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </TabsContent>
 
           {/* SECCIÓN 1.5: CALENDARIO INTEGRADO */}
@@ -1245,7 +1341,7 @@ function MainApp() {
             Equipo de Natación Master - Universidad de Chile
           </p>
           <p className="text-sm text-blue-300 mt-2">
-            Planificación Temporada 2026 | 3 entrenamientos semanales | Lunes, Miércoles, Viernes + Sábados de Desafíos
+            Temporada 2026-2027 | Macrociclo 44 semanas | 7 bloques de periodización ondulante | Marzo 2026 - Enero 2027
           </p>
         </div>
       </footer>

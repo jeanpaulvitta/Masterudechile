@@ -11,6 +11,7 @@ import { Plus, Edit, Trash2, Dumbbell, Calendar as CalendarIcon, ChevronLeft, Ch
 import type { Workout } from "../data/workouts";
 import type { Challenge } from "../data/challenges";
 import { useAuth } from "../contexts/AuthContext";
+import { trainingBlocks } from "../data/workouts2026-2027";
 
 interface UnifiedCalendarManagerProps {
   workouts: Workout[];
@@ -22,6 +23,7 @@ interface UnifiedCalendarManagerProps {
   onEditChallenge: (id: string, challenge: Omit<Challenge, "id">) => void;
   onDeleteChallenge: (id: string) => void;
   onSyncFromLocal?: () => void;
+  onForceSyncFromLocal?: () => void;
 }
 
 interface CalendarDay {
@@ -40,8 +42,8 @@ const MONTHS = [
   "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
 ];
 
-const DAYS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
-const DAY_NAMES_FULL = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+const DAYS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+const DAY_NAMES_FULL = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
 export function UnifiedCalendarManager({ 
   workouts, 
@@ -52,7 +54,8 @@ export function UnifiedCalendarManager({
   onAddChallenge,
   onEditChallenge,
   onDeleteChallenge,
-  onSyncFromLocal
+  onSyncFromLocal,
+  onForceSyncFromLocal
 }: UnifiedCalendarManagerProps) {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin" || user?.role === "coach";
@@ -104,7 +107,7 @@ export function UnifiedCalendarManager({
   const availableSchedules: ("AM" | "PM")[] = ["AM", "PM"];
 
   // Helper para parsear fechas en formato "3 de febrero"
-  const parseWorkoutDate = (dateText: string, year: number = 2026): Date | null => {
+  const parseWorkoutDate = (dateText: string, viewingYear: number): Date | null => {
     const monthMap: { [key: string]: number } = {
       'enero': 0, 'febrero': 1, 'marzo': 2, 'abril': 3,
       'mayo': 4, 'junio': 5, 'julio': 6, 'agosto': 7,
@@ -120,6 +123,19 @@ export function UnifiedCalendarManager({
       const month = monthMap[monthName];
       
       if (month !== undefined && day >= 1 && day <= 31) {
+        // Determinar el año correcto basándose en el mes
+        // La temporada va de marzo 2026 a enero 2027
+        let year: number;
+        
+        // Marzo (2) a Diciembre (11) → 2026
+        if (month >= 2 && month <= 11) {
+          year = 2026;
+        }
+        // Enero (0) o Febrero (1) → 2027
+        else {
+          year = 2027;
+        }
+        
         return new Date(year, month, day);
       }
     }
@@ -129,9 +145,39 @@ export function UnifiedCalendarManager({
 
   // Generar días del calendario
   const calendarDays = useMemo(() => {
+    console.log('🗓️ UnifiedCalendarManager - Generando calendario');
+    console.log('  📅 Mes actual:', MONTHS[currentMonth], currentYear);
+    console.log('  📊 Total workouts disponibles:', workouts.length);
+    console.log('  📋 Sample workouts:', workouts.slice(0, 5).map(w => ({ 
+      week: w.week, 
+      date: w.date, 
+      day: w.day,
+      schedule: w.schedule 
+    })));
+    
+    // Debug específico para agosto 2026
+    if (currentMonth === 7 && currentYear === 2026) {
+      const agostoWorkouts = workouts.filter(w => {
+        const parsed = parseWorkoutDate(w.date, currentYear);
+        return parsed && parsed.getMonth() === 7 && parsed.getFullYear() === 2026;
+      });
+      console.log('  🔍 AGOSTO 2026 - Entrenamientos encontrados:', agostoWorkouts.length);
+      console.log('  🔍 AGOSTO 2026 - Ejemplos:', agostoWorkouts.slice(0, 3).map(w => ({
+        date: w.date,
+        day: w.day,
+        schedule: w.schedule,
+        week: w.week
+      })));
+    }
+    
     const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
     const startDate = new Date(firstDayOfMonth);
-    startDate.setDate(startDate.getDate() - startDate.getDay());
+    
+    // Ajustar para que la semana empiece en lunes (1) en lugar de domingo (0)
+    // getDay() retorna: 0=Domingo, 1=Lunes, 2=Martes, ..., 6=Sábado
+    const firstDayWeekday = startDate.getDay();
+    const daysToSubtract = firstDayWeekday === 0 ? 6 : firstDayWeekday - 1; // Si es domingo, retroceder 6 días; si no, retroceder (día - 1)
+    startDate.setDate(startDate.getDate() - daysToSubtract);
 
     const days: CalendarDay[] = [];
     const currentDate = new Date(startDate);
@@ -143,7 +189,11 @@ export function UnifiedCalendarManager({
         currentDate.getMonth() === today.getMonth() &&
         currentDate.getFullYear() === today.getFullYear();
 
-      const workoutDay = DAY_NAMES_FULL[currentDate.getDay()];
+      // Mapear día de la semana: JS usa 0=Domingo, pero queremos 0=Lunes
+      const jsDayIndex = currentDate.getDay(); // 0=Dom, 1=Lun, 2=Mar, ..., 6=Sáb
+      const adjustedDayIndex = jsDayIndex === 0 ? 6 : jsDayIndex - 1; // 0=Lun, 1=Mar, ..., 6=Dom
+      const workoutDay = DAY_NAMES_FULL[adjustedDayIndex];
+      
       const workoutDate = currentDate.getDate();
       const workoutMonth = MONTHS[currentDate.getMonth()].toLowerCase();
 
@@ -156,15 +206,33 @@ export function UnifiedCalendarManager({
         const workoutParsedDate = parseWorkoutDate(workout.date, currentYear);
         
         if (workoutParsedDate) {
-          // Comparar fechas usando objetos Date
-          return workoutParsedDate.getDate() === currentDate.getDate() &&
+          // DEBUG: Log para ver qué está pasando
+          const isMatch = workoutParsedDate.getDate() === currentDate.getDate() &&
                  workoutParsedDate.getMonth() === currentDate.getMonth() &&
                  workoutParsedDate.getFullYear() === currentDate.getFullYear();
+          
+          if (currentMonth === 1 && currentYear === 2026) { // Febrero 2026
+            console.log('  🔍 Comparando workout:', {
+              workoutDate: workout.date,
+              workoutDay: workout.day,
+              parsedDate: workoutParsedDate.toISOString().split('T')[0],
+              currentDate: currentDate.toISOString().split('T')[0],
+              match: isMatch
+            });
+          }
+          
+          // Comparar fechas usando objetos Date
+          return isMatch;
         }
         
         // Fallback al método anterior si no se pudo parsear
         return workout.date.toLowerCase().includes(workoutDate.toString()) &&
                workout.date.toLowerCase().includes(workoutMonth);
+      }).sort((a, b) => {
+        // Ordenar por horario: AM antes que PM
+        if (a.schedule === 'AM' && b.schedule === 'PM') return -1;
+        if (a.schedule === 'PM' && b.schedule === 'AM') return 1;
+        return 0;
       });
 
       // Filtrar desafíos para este día usando parsing de fechas mejorado
@@ -218,13 +286,34 @@ export function UnifiedCalendarManager({
     );
   };
 
+  // Función para obtener el bloque de entrenamiento según la semana
+  const getBlockForWeek = (week: number) => {
+    return trainingBlocks.find(block => block.weekNumbers.includes(week));
+  };
+
+  // Función para obtener colores según el bloque
+  const getBlockColors = (blockColor: string) => {
+    const colorMap: { [key: string]: { bg: string; border: string; text: string } } = {
+      blue: { bg: 'bg-blue-100', border: 'border-blue-400', text: 'text-blue-700' },
+      red: { bg: 'bg-red-100', border: 'border-red-400', text: 'text-red-700' },
+      purple: { bg: 'bg-purple-100', border: 'border-purple-400', text: 'text-purple-700' },
+      green: { bg: 'bg-green-100', border: 'border-green-400', text: 'text-green-700' },
+      yellow: { bg: 'bg-yellow-100', border: 'border-yellow-400', text: 'text-yellow-700' },
+    };
+    return colorMap[blockColor] || { bg: 'bg-gray-100', border: 'border-gray-400', text: 'text-gray-700' };
+  };
+
   const handleDayClick = (day: CalendarDay, type: EventType) => {
     if (!day.isCurrentMonth) return;
     
     setSelectedDay(day);
     setEventType(type);
     
-    const dayName = DAY_NAMES_FULL[day.date.getDay()];
+    // Mapear día de la semana correctamente: JS usa 0=Domingo, pero queremos 0=Lunes
+    const jsDayIndex = day.date.getDay(); // 0=Dom, 1=Lun, 2=Mar, ..., 6=Sáb
+    const adjustedDayIndex = jsDayIndex === 0 ? 6 : jsDayIndex - 1; // 0=Lun, 1=Mar, ..., 6=Dom
+    const dayName = DAY_NAMES_FULL[adjustedDayIndex];
+    
     const monthName = MONTHS[day.date.getMonth()].toLowerCase();
     const dateString = `${day.date.getDate()} de ${monthName}`;
     
@@ -455,6 +544,17 @@ export function UnifiedCalendarManager({
                 Sincronizar Todo
               </Button>
             )}
+            {onForceSyncFromLocal && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onForceSyncFromLocal}
+                className="text-red-600 border-red-600 hover:bg-red-50"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Forzar Sincronización
+              </Button>
+            )}
           </div>
         </div>
       </CardHeader>
@@ -549,26 +649,34 @@ export function UnifiedCalendarManager({
                   {/* Lista de eventos */}
                   <div className="flex flex-col gap-0.5 flex-1">
                     {/* Entrenamientos */}
-                    {day.workouts.slice(0, 1).map((workout) => (
-                      <div
-                        key={workout.id}
-                        onClick={(e) => handleWorkoutClick(workout, e)}
-                        className="group relative flex items-center gap-1 bg-blue-100 hover:bg-blue-200 border border-blue-300 rounded px-1 py-0.5 transition-colors cursor-pointer"
-                      >
-                        <Waves className="w-2 h-2 text-blue-600 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs text-blue-900 font-medium truncate">
-                            {workout.schedule === "AM" ? "🌅" : "🌆"} S{workout.week}
-                          </p>
-                        </div>
-                        <button
-                          onClick={(e) => workout.id && handleDeleteWorkout(workout.id, e)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                    {day.workouts.slice(0, 1).map((workout) => {
+                      const block = getBlockForWeek(workout.week);
+                      const colors = block ? getBlockColors(block.color) : { bg: 'bg-blue-100', border: 'border-blue-300', text: 'text-blue-700' };
+                      
+                      return (
+                        <div
+                          key={workout.id}
+                          onClick={(e) => handleWorkoutClick(workout, e)}
+                          className={`group relative flex items-center gap-1 ${colors.bg} hover:bg-opacity-80 border ${colors.border} rounded px-1 py-0.5 transition-colors cursor-pointer`}
                         >
-                          <Trash2 className="w-3 h-3 text-red-600" />
-                        </button>
-                      </div>
-                    ))}
+                          <Waves className="w-2 h-2 flex-shrink-0" style={{ color: block ? `var(--color-${block.color}-600)` : '#2563eb' }} />
+                          <div className="flex-1 min-w-0 flex items-center gap-1">
+                            <span className={`text-[10px] font-bold ${colors.text} px-1 py-0 rounded`}>
+                              S{workout.week}
+                            </span>
+                            <span className="text-xs">
+                              {workout.schedule === "AM" ? "🌅" : "🌆"}
+                            </span>
+                          </div>
+                          <button
+                            onClick={(e) => workout.id && handleDeleteWorkout(workout.id, e)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <Trash2 className="w-3 h-3 text-red-600" />
+                          </button>
+                        </div>
+                      );
+                    })}
 
                     {/* Desafíos */}
                     {day.challenges.slice(0, 1).map((challenge) => (
@@ -622,6 +730,34 @@ export function UnifiedCalendarManager({
               </div>
             );
           })}
+        </div>
+
+        {/* Leyenda de Bloques de Periodización */}
+        <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+          <h4 className="text-xs font-semibold text-gray-700 mb-2">Periodización (7 Bloques - 44 Semanas)</h4>
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
+            {trainingBlocks.map((block) => {
+              const colors = getBlockColors(block.color);
+              return (
+                <div key={block.id} className={`${colors.bg} ${colors.border} border rounded p-2`}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className={`text-xs font-bold ${colors.text}`}>
+                      Bloque {block.id}
+                    </span>
+                    <span className="text-[10px] text-gray-600">
+                      {block.weeks}sem
+                    </span>
+                  </div>
+                  <p className="text-[10px] font-medium text-gray-800 mb-1 line-clamp-2">
+                    {block.name}
+                  </p>
+                  <p className="text-[9px] text-gray-600">
+                    S{block.weekNumbers[0]}-{block.weekNumbers[block.weekNumbers.length - 1]}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Diálogo unificado */}
@@ -703,19 +839,30 @@ export function UnifiedCalendarManager({
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Mesociclo</Label>
+                  <Label>Bloque de Periodización</Label>
                   <Select value={workoutFormData.mesociclo} onValueChange={(value) => setWorkoutFormData({ ...workoutFormData, mesociclo: value })}>
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Selecciona un bloque" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Mantenimiento">Mantenimiento</SelectItem>
-                      <SelectItem value="Base">Base</SelectItem>
-                      <SelectItem value="Desarrollo">Desarrollo</SelectItem>
-                      <SelectItem value="Pre-competitivo">Pre-competitivo</SelectItem>
-                      <SelectItem value="Competitivo">Competitivo</SelectItem>
+                      {trainingBlocks.map((block) => {
+                        const colors = getBlockColors(block.color);
+                        return (
+                          <SelectItem key={block.id} value={`Bloque ${block.id}`}>
+                            <div className="flex items-center gap-2">
+                              <span className={`inline-block w-3 h-3 rounded ${colors.bg} ${colors.border} border`}></span>
+                              <span className="font-medium">Bloque {block.id}:</span>
+                              <span className="text-sm">{block.name}</span>
+                              <span className="text-xs text-gray-500">({block.weekNumbers[0]}-{block.weekNumbers[block.weekNumbers.length - 1]})</span>
+                            </div>
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-gray-500">
+                    El bloque se asigna automáticamente según el número de semana
+                  </p>
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">

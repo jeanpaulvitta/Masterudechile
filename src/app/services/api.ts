@@ -446,17 +446,41 @@ export async function updateWorkout(id: string, workout: Omit<Workout, 'id'>): P
 
 export async function deleteWorkout(id: string): Promise<void> {
   try {
-    const response = await fetch(`${API_BASE_URL}/workouts/${id}`, {
+    console.log(`🗑️ Client: Attempting to delete workout ${id}...`);
+    
+    // Use longer timeout for delete operations (30 seconds)
+    const response = await fetchWithTimeout(`${API_BASE_URL}/workouts/${id}`, {
       method: 'DELETE',
       headers,
-    });
+    }, 30000);
+    
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`Failed to delete workout: ${error.error || response.statusText}`);
+      const errorText = await response.text();
+      let errorJson;
+      try {
+        errorJson = JSON.parse(errorText);
+      } catch {
+        errorJson = { error: errorText };
+      }
+      
+      console.error(`❌ Client: Server returned error ${response.status}:`, errorJson);
+      throw new Error(`Failed to delete workout: ${errorJson.error || response.statusText}`);
     }
-    console.log('✅ Workout deleted:', id);
+    
+    console.log('✅ Client: Workout deleted successfully:', id);
   } catch (error) {
-    console.error('❌ Error deleting workout:', error);
+    // Enhanced error logging
+    if (error instanceof Error) {
+      if (error.message.includes('timeout')) {
+        console.error('❌ Client: Timeout deleting workout - server took too long to respond');
+        throw new Error('La operación tardó demasiado. Por favor, intenta de nuevo.');
+      } else if (error.message.includes('Failed to fetch')) {
+        console.error('❌ Client: Network error - could not reach server');
+        throw new Error('Error de conexión. Verifica tu conexión a internet.');
+      }
+    }
+    
+    console.error('❌ Client: Error deleting workout:', error);
     throw error;
   }
 }
@@ -482,17 +506,24 @@ export async function clearAllWorkouts(): Promise<void> {
 
 export async function fetchChallenges(): Promise<Challenge[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/challenges`, { headers });
+    const response = await fetch(`${API_BASE_URL}/challenges`, { 
+      headers,
+      signal: AbortSignal.timeout(15000) // Timeout de 15 segundos
+    });
+    
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`Failed to fetch challenges: ${error.error || response.statusText}`);
+      console.warn(`⚠️ Challenges endpoint returned ${response.status}, returning empty array`);
+      return [];
     }
+    
     const data = await response.json();
-    console.log('✅ Challenges fetched from server:', data.challenges);
-    return data.challenges;
+    const challenges = Array.isArray(data.challenges) ? data.challenges : [];
+    console.log('✅ Challenges fetched from server:', challenges.length);
+    return challenges;
   } catch (error) {
-    console.error('❌ Error fetching challenges:', error);
-    throw error;
+    // No lanzar error, solo advertir y devolver array vacío
+    console.warn('⚠️ Could not fetch challenges (returning empty array):', error instanceof Error ? error.message : 'Unknown error');
+    return [];
   }
 }
 
@@ -557,17 +588,24 @@ export async function deleteChallenge(id: string): Promise<void> {
 
 export async function fetchHolidays(): Promise<Holiday[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/holidays`, { headers });
+    const response = await fetch(`${API_BASE_URL}/holidays`, { 
+      headers,
+      signal: AbortSignal.timeout(15000) // Timeout de 15 segundos
+    });
+    
     if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`Failed to fetch holidays: ${error.error || response.statusText}`);
+      console.warn(`⚠️ Holidays endpoint returned ${response.status}, returning empty array`);
+      return [];
     }
+    
     const data = await response.json();
-    console.log('✅ Holidays fetched from server:', data.holidays);
-    return data.holidays;
+    const holidays = Array.isArray(data.holidays) ? data.holidays : [];
+    console.log('✅ Holidays fetched from server:', holidays.length);
+    return holidays;
   } catch (error) {
-    console.error('❌ Error fetching holidays:', error);
-    throw error;
+    // No lanzar error, solo advertir y devolver array vacío
+    console.warn('⚠️ Could not fetch holidays (returning empty array):', error instanceof Error ? error.message : 'Unknown error');
+    return [];
   }
 }
 
@@ -714,18 +752,23 @@ export async function deleteTestControl(id: string): Promise<void> {
 
 export async function fetchTestResults(): Promise<TestResult[]> {
   try {
-    const response = await fetchWithTimeout(`${API_BASE_URL}/test-results`, { headers }, 15000);
+    const response = await fetchWithTimeout(`${API_BASE_URL}/test-results`, { headers }, 20000); // Aumentar timeout a 20s
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Test results fetch error:', errorText);
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      console.warn('⚠️ Test results fetch error (returning empty array):', errorText);
+      return []; // Return empty instead of throwing
     }
     const data = await response.json();
     console.log('✅ Test results fetched:', data.testResults?.length || 0);
     return data.testResults || [];
   } catch (error) {
-    console.error('❌ Error fetching test results:', error);
-    // En lugar de lanzar el error, retornar array vacío para no bloquear la carga
+    // Silently handle timeout errors - just log warning and return empty array
+    if (error instanceof Error && error.message.includes('timeout')) {
+      console.warn('⚠️ Test results fetch timeout - returning empty array (this is normal on first load)');
+    } else {
+      console.warn('⚠️ Error fetching test results - returning empty array:', error);
+    }
+    // Return empty array to not block app loading
     return [];
   }
 }

@@ -124,20 +124,20 @@ export function TeamRecordsBoard({ swimmers }: TeamRecordsBoardProps) {
       : sortedCategories.filter(cat => cat === selectedCategory);
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {filteredCategories.map((category) => (
           <Card key={category}>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Trophy className="w-5 h-5 text-yellow-500" />
-                Categoría {category} - {gender === "Masculino" ? "Hombres" : "Mujeres"}
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500 flex-shrink-0" />
+                <span className="truncate">Categoría {category} - {gender === "Masculino" ? "Hombres" : "Mujeres"}</span>
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs sm:text-sm">
                 Mejores marcas del equipo en {selectedStyle}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {DISTANCES.map((distance) => {
                   const records = getRecordsByStyleGenderCategory(
                     selectedStyle,

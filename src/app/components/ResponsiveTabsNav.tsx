@@ -10,16 +10,16 @@ interface ResponsiveTabsNavProps {
 
 export function ResponsiveTabsNav({ userRole }: ResponsiveTabsNavProps) {
   return (
-    <div className="bg-white rounded-lg sm:rounded-xl shadow-md sm:shadow-lg mb-4 sm:mb-6 lg:mb-8">
+    <div className="bg-white rounded-lg sm:rounded-xl shadow-md sm:shadow-lg mb-12 sm:mb-16 lg:mb-20 mt-2 sm:mt-4">
       {/* Grid responsivo sin scroll */}
-      <div className="px-1 py-2 sm:px-1.5 sm:py-2.5 md:px-2 md:py-3">
+      <div className="px-0.5 py-1 sm:px-1.5 sm:py-2.5 md:px-2 md:py-3">
         <TabsList className={`
           grid w-full
           ${userRole === "admin" 
             ? "grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-9" 
             : "grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-8"
           }
-          gap-1.5 sm:gap-2 bg-transparent
+          gap-1 sm:gap-2 bg-transparent
         `}>
           {/* Pestaña: Entrenamientos */}
           <TabsTrigger 
@@ -27,8 +27,8 @@ export function ResponsiveTabsNav({ userRole }: ResponsiveTabsNavProps) {
             className="
               flex flex-col items-center justify-center
               gap-0.5 sm:gap-1
-              py-1.5 sm:py-2 md:py-2.5
-              px-1.5 sm:px-2 md:px-2.5
+              py-1 sm:py-2 md:py-2.5
+              px-1 sm:px-2 md:px-2.5
               min-w-0
               rounded-md
               transition-all duration-200
@@ -40,8 +40,8 @@ export function ResponsiveTabsNav({ userRole }: ResponsiveTabsNavProps) {
               text-gray-700
             "
           >
-            <Dumbbell className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 shrink-0" />
-            <span className="text-[9px] sm:text-[10px] md:text-xs font-medium whitespace-nowrap">Entrenos</span>
+            <Dumbbell className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 shrink-0" />
+            <span className="text-[8px] sm:text-[10px] md:text-xs font-medium whitespace-nowrap">Entrenos</span>
           </TabsTrigger>
 
           {/* Pestaña: Calendario */}
@@ -50,8 +50,8 @@ export function ResponsiveTabsNav({ userRole }: ResponsiveTabsNavProps) {
             className="
               flex flex-col items-center justify-center
               gap-0.5 sm:gap-1
-              py-1.5 sm:py-2 md:py-2.5
-              px-1.5 sm:px-2 md:px-2.5
+              py-1 sm:py-2 md:py-2.5
+              px-1 sm:px-2 md:px-2.5
               min-w-0
               rounded-md
               transition-all duration-200
@@ -63,8 +63,8 @@ export function ResponsiveTabsNav({ userRole }: ResponsiveTabsNavProps) {
               text-gray-700
             "
           >
-            <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 shrink-0" />
-            <span className="text-[9px] sm:text-[10px] md:text-xs font-medium whitespace-nowrap">Calendario</span>
+            <Calendar className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 shrink-0" />
+            <span className="text-[8px] sm:text-[10px] md:text-xs font-medium whitespace-nowrap">Calendario</span>
           </TabsTrigger>
 
           {/* Pestaña: Nadadores */}
@@ -73,8 +73,8 @@ export function ResponsiveTabsNav({ userRole }: ResponsiveTabsNavProps) {
             className="
               flex flex-col items-center justify-center
               gap-0.5 sm:gap-1
-              py-1.5 sm:py-2 md:py-2.5
-              px-1.5 sm:px-2 md:px-2.5
+              py-1 sm:py-2 md:py-2.5
+              px-1 sm:px-2 md:px-2.5
               min-w-0
               rounded-md
               transition-all duration-200
@@ -86,8 +86,8 @@ export function ResponsiveTabsNav({ userRole }: ResponsiveTabsNavProps) {
               text-gray-700
             "
           >
-            <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 shrink-0" />
-            <span className="text-[9px] sm:text-[10px] md:text-xs font-medium whitespace-nowrap">Nadadores</span>
+            <Users className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 shrink-0" />
+            <span className="text-[8px] sm:text-[10px] md:text-xs font-medium whitespace-nowrap">Nadadores</span>
           </TabsTrigger>
 
           {/* Pestaña: Competencias */}
@@ -96,8 +96,8 @@ export function ResponsiveTabsNav({ userRole }: ResponsiveTabsNavProps) {
             className="
               flex flex-col items-center justify-center
               gap-0.5 sm:gap-1
-              py-1.5 sm:py-2 md:py-2.5
-              px-1.5 sm:px-2 md:px-2.5
+              py-1 sm:py-2 md:py-2.5
+              px-1 sm:px-2 md:px-2.5
               min-w-0
               rounded-md
               transition-all duration-200
@@ -109,8 +109,8 @@ export function ResponsiveTabsNav({ userRole }: ResponsiveTabsNavProps) {
               text-gray-700
             "
           >
-            <Medal className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 shrink-0" />
-            <span className="text-[9px] sm:text-[10px] md:text-xs font-medium whitespace-nowrap">Compet.</span>
+            <Medal className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 shrink-0" />
+            <span className="text-[8px] sm:text-[10px] md:text-xs font-medium whitespace-nowrap">Compet.</span>
           </TabsTrigger>
 
           {/* Pestaña: Test Control */}
@@ -119,8 +119,8 @@ export function ResponsiveTabsNav({ userRole }: ResponsiveTabsNavProps) {
             className="
               flex flex-col items-center justify-center
               gap-0.5 sm:gap-1
-              py-1.5 sm:py-2 md:py-2.5
-              px-1.5 sm:px-2 md:px-2.5
+              py-1 sm:py-2 md:py-2.5
+              px-1 sm:px-2 md:px-2.5
               min-w-0
               rounded-md
               transition-all duration-200
@@ -132,8 +132,8 @@ export function ResponsiveTabsNav({ userRole }: ResponsiveTabsNavProps) {
               text-gray-700
             "
           >
-            <Clipboard className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 shrink-0" />
-            <span className="text-[9px] sm:text-[10px] md:text-xs font-medium whitespace-nowrap">Tests</span>
+            <Clipboard className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 shrink-0" />
+            <span className="text-[8px] sm:text-[10px] md:text-xs font-medium whitespace-nowrap">Tests</span>
           </TabsTrigger>
 
           {/* Pestaña: Récords */}
@@ -142,8 +142,8 @@ export function ResponsiveTabsNav({ userRole }: ResponsiveTabsNavProps) {
             className="
               flex flex-col items-center justify-center
               gap-0.5 sm:gap-1
-              py-1.5 sm:py-2 md:py-2.5
-              px-1.5 sm:px-2 md:px-2.5
+              py-1 sm:py-2 md:py-2.5
+              px-1 sm:px-2 md:px-2.5
               min-w-0
               rounded-md
               transition-all duration-200
@@ -155,8 +155,8 @@ export function ResponsiveTabsNav({ userRole }: ResponsiveTabsNavProps) {
               text-gray-700
             "
           >
-            <Crown className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 shrink-0" />
-            <span className="text-[9px] sm:text-[10px] md:text-xs font-medium whitespace-nowrap">Récords</span>
+            <Crown className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 shrink-0" />
+            <span className="text-[8px] sm:text-[10px] md:text-xs font-medium whitespace-nowrap">Récords</span>
           </TabsTrigger>
 
           {/* Pestaña: Logros */}
@@ -165,8 +165,8 @@ export function ResponsiveTabsNav({ userRole }: ResponsiveTabsNavProps) {
             className="
               flex flex-col items-center justify-center
               gap-0.5 sm:gap-1
-              py-1.5 sm:py-2 md:py-2.5
-              px-1.5 sm:px-2 md:px-2.5
+              py-1 sm:py-2 md:py-2.5
+              px-1 sm:px-2 md:px-2.5
               min-w-0
               rounded-md
               transition-all duration-200
@@ -178,8 +178,8 @@ export function ResponsiveTabsNav({ userRole }: ResponsiveTabsNavProps) {
               text-gray-700
             "
           >
-            <Award className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 shrink-0" />
-            <span className="text-[9px] sm:text-[10px] md:text-xs font-medium whitespace-nowrap">Logros</span>
+            <Award className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 shrink-0" />
+            <span className="text-[8px] sm:text-[10px] md:text-xs font-medium whitespace-nowrap">Logros</span>
           </TabsTrigger>
 
           {/* Pestaña: Asistencia */}
@@ -188,8 +188,8 @@ export function ResponsiveTabsNav({ userRole }: ResponsiveTabsNavProps) {
             className="
               flex flex-col items-center justify-center
               gap-0.5 sm:gap-1
-              py-1.5 sm:py-2 md:py-2.5
-              px-1.5 sm:px-2 md:px-2.5
+              py-1 sm:py-2 md:py-2.5
+              px-1 sm:px-2 md:px-2.5
               min-w-0
               rounded-md
               transition-all duration-200
@@ -201,8 +201,8 @@ export function ResponsiveTabsNav({ userRole }: ResponsiveTabsNavProps) {
               text-gray-700
             "
           >
-            <ClipboardList className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 shrink-0" />
-            <span className="text-[9px] sm:text-[10px] md:text-xs font-medium whitespace-nowrap">Asistencia</span>
+            <ClipboardList className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 shrink-0" />
+            <span className="text-[8px] sm:text-[10px] md:text-xs font-medium whitespace-nowrap">Asistencia</span>
           </TabsTrigger>
 
           {/* Pestañas Administrativas - Solo para Administradores */}
@@ -214,8 +214,8 @@ export function ResponsiveTabsNav({ userRole }: ResponsiveTabsNavProps) {
                 className="
                   flex flex-col items-center justify-center
                   gap-0.5 sm:gap-1
-                  py-1.5 sm:py-2 md:py-2.5
-                  px-1.5 sm:px-2 md:px-2.5
+                  py-1 sm:py-2 md:py-2.5
+                  px-1 sm:px-2 md:px-2.5
                   min-w-0
                   rounded-md
                   transition-all duration-200
@@ -227,8 +227,8 @@ export function ResponsiveTabsNav({ userRole }: ResponsiveTabsNavProps) {
                   text-gray-700
                 "
               >
-                <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5 shrink-0" />
-                <span className="text-[9px] sm:text-[10px] md:text-xs font-medium whitespace-nowrap">Usuarios</span>
+                <Shield className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 shrink-0" />
+                <span className="text-[8px] sm:text-[10px] md:text-xs font-medium whitespace-nowrap">Usuarios</span>
               </TabsTrigger>
             </>
           )}

@@ -119,15 +119,15 @@ export function CompetitionManager({
   const monthKeys = Object.keys(competitionsByMonth);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h2 className="text-3xl font-bold flex items-center gap-3">
-            <Trophy className="w-8 h-8 text-yellow-600" />
+          <h2 className="text-2xl sm:text-3xl font-bold flex items-center gap-2 sm:gap-3">
+            <Trophy className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-600" />
             Calendario de Competencias
           </h2>
-          <p className="text-gray-600 mt-2">
+          <p className="text-sm sm:text-base text-gray-600 mt-1 sm:mt-2">
             Gestiona todas las competencias de la temporada
           </p>
         </div>
@@ -138,7 +138,7 @@ export function CompetitionManager({
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         <Card>
           <CardContent className="pt-6 text-center">
             <div className="text-3xl font-bold text-yellow-600">{competitions.length}</div>

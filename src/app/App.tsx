@@ -34,7 +34,6 @@ import { UserMenu } from "./components/UserMenu";
 import { UnifiedCalendarManager } from "./components/UnifiedCalendarManager";
 import { HolidayManager } from "./components/HolidayManager";
 import { TrashManager } from "./components/TrashManager";
-import { DuplicateWorkoutsFinder } from "./components/DuplicateWorkoutsFinder";
 import { AdvancedDuplicateCleaner } from "./components/AdvancedDuplicateCleaner";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { TestControlManager } from "./components/TestControlManager";
@@ -735,7 +734,40 @@ function MainApp() {
 
   // Función para convertir texto de fecha a formato ISO
   const parseDateToISO = (dateText: string, week: number): string => {
-    // Mapa de meses en español a números
+    // Primero intentar parsear formatos tipo "03-Jul-2026" o "3-Jul-2026"
+    const isoFormatRegex = /(\d{1,2})-(\w+)-(\d{4})/;
+    const isoMatch = dateText.match(isoFormatRegex);
+    
+    if (isoMatch) {
+      const day = parseInt(isoMatch[1]);
+      const monthAbbr = isoMatch[2].toLowerCase();
+      const year = parseInt(isoMatch[3]);
+      
+      // Mapa de abreviaturas de meses en español e inglés
+      const monthAbbrMap: { [key: string]: number } = {
+        'ene': 0, 'jan': 0, 'enero': 0, 'january': 0,
+        'feb': 1, 'febrero': 1, 'february': 1,
+        'mar': 2, 'marzo': 2, 'march': 2,
+        'abr': 3, 'apr': 3, 'abril': 3, 'april': 3,
+        'may': 4, 'mayo': 4,
+        'jun': 5, 'junio': 5, 'june': 5,
+        'jul': 6, 'julio': 6, 'july': 6,
+        'ago': 7, 'aug': 7, 'agosto': 7, 'august': 7,
+        'sep': 8, 'septiembre': 8, 'september': 8,
+        'oct': 9, 'octubre': 9, 'october': 9,
+        'nov': 10, 'noviembre': 10, 'november': 10,
+        'dic': 11, 'dec': 11, 'diciembre': 11, 'december': 11
+      };
+      
+      const month = monthAbbrMap[monthAbbr];
+      
+      if (month !== undefined) {
+        const date = new Date(year, month, day);
+        return date.toISOString().split('T')[0];
+      }
+    }
+    
+    // Mapa de meses completos en español a números
     const monthMap: { [key: string]: number } = {
       'enero': 0,
       'febrero': 1,
@@ -965,15 +997,19 @@ function MainApp() {
       {/* Header */}
       <header className="bg-[#003366] text-white shadow-lg">
         <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
-          <div className="flex items-center justify-between gap-3 sm:gap-6 mb-3 sm:mb-4">
-            <div className="flex items-center gap-3 sm:gap-6">
-              <LogoConfig />
-              <div>
-                <h1 className="text-2xl sm:text-4xl font-bold leading-tight">Natación Master UCH</h1>
-                <p className="text-blue-200 text-sm sm:text-lg">Universidad de Chile</p>
+          <div className="flex items-center justify-between gap-4 sm:gap-6 mb-3 sm:mb-4">
+            <div className="flex items-center gap-2 sm:gap-6 flex-1 min-w-0">
+              <div className="flex-shrink-0">
+                <LogoConfig />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-xl sm:text-4xl font-bold leading-tight truncate">Natación Master UCH</h1>
+                <p className="text-blue-200 text-xs sm:text-lg truncate">Universidad de Chile</p>
               </div>
             </div>
-            <UserMenu />
+            <div className="flex-shrink-0">
+              <UserMenu />
+            </div>
           </div>
           <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-4 mt-4 sm:mt-6">
             <div className="bg-white/10 backdrop-blur-sm rounded-lg px-2 sm:px-4 py-1.5 sm:py-2 border border-white/20">
@@ -987,10 +1023,6 @@ function MainApp() {
             <div className="bg-white/10 backdrop-blur-sm rounded-lg px-2 sm:px-4 py-1.5 sm:py-2 border border-white/20">
               <p className="text-xs sm:text-sm text-blue-200">Entrenamientos</p>
               <p className="font-semibold text-xs sm:text-base">{totalWorkouts} sesiones</p>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg px-2 sm:px-4 py-1.5 sm:py-2 border border-white/20">
-              <p className="text-xs sm:text-sm text-blue-200">Desafíos</p>
-              <p className="font-semibold text-xs sm:text-base">{totalChallenges} desafíos</p>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-lg px-2 sm:px-4 py-1.5 sm:py-2 border border-white/20">
               <p className="text-xs sm:text-sm text-blue-200">Distancia Total</p>
@@ -1007,19 +1039,15 @@ function MainApp() {
           <ResponsiveTabsNav userRole={user?.role} />
 
           {/* SECCIÓN 1: ENTRENAMIENTOS Y COMPETENCIAS */}
-          <TabsContent value="entrenamientos" className="space-y-8">
+          <TabsContent value="entrenamientos" className="space-y-6 sm:space-y-8 pt-16 sm:pt-20 lg:pt-24">
             {/* Mesociclos Overview */}
             <div>
-              <div className="mb-6">
-                <h2 className="text-3xl font-bold mb-2">📅 Temporada 2026-2027</h2>
-                <p className="text-gray-600">
-                  Macrociclo completo de 44 semanas | Marzo 2026 - Enero 2027 | Periodización ondulante
+              <div className="mb-6 sm:mb-8">
+                <p className="text-sm sm:text-base text-gray-600">
                 </p>
-                <p className="text-sm text-gray-500 mt-1">
-                  Haz clic en cada bloque para ver entrenamientos detallados por semana
-                </p>
+
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 sm:gap-6">
                 {mesocicloStats.map((mesociclo, index) => (
                   <div key={mesociclo.name} className="relative">
                     {/* Número del bloque */}
@@ -1055,9 +1083,6 @@ function MainApp() {
                 {/* Limpiador Avanzado de Duplicados */}
                 <AdvancedDuplicateCleaner />
 
-                {/* Detector de Duplicados (Modo Manual) */}
-                <DuplicateWorkoutsFinder />
-
                 {/* Gestión de Días Feriados */}
                 <HolidayManager
                   holidays={holidays}
@@ -1073,13 +1098,13 @@ function MainApp() {
 
             {/* Estadísticas de Entrenamiento */}
             <div>
-              <h2 className="text-2xl font-bold mb-4">Estadísticas de Entrenamiento</h2>
+              <h2 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">Estadísticas de Entrenamiento</h2>
               <TrainingStats sessions={allSessions} />
             </div>
           </TabsContent>
 
           {/* SECCIÓN 1.5: CALENDARIO INTEGRADO */}
-          <TabsContent value="calendario" className="space-y-8">
+          <TabsContent value="calendario" className="space-y-8 pt-16 sm:pt-20 lg:pt-24">
             <IntegratedCalendar
               sessions={allSessionsWithDates.map((s, idx) => ({
                 id: `session_${s.week}_${idx}`,
@@ -1100,7 +1125,7 @@ function MainApp() {
           </TabsContent>
 
           {/* SECCIÓN 2: NADADORES */}
-          <TabsContent value="nadadores" className="space-y-4 sm:space-y-8">
+          <TabsContent value="nadadores" className="space-y-4 sm:space-y-8 pt-16 sm:pt-20 lg:pt-24">
             <div className="flex items-center justify-between gap-2 sm:gap-3 mb-4 sm:mb-6">
               <div className="flex items-center gap-2 sm:gap-3">
                 <Users className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
@@ -1255,7 +1280,7 @@ function MainApp() {
           </TabsContent>
 
           {/* SECCIÓN 3: COMPETENCIAS */}
-          <TabsContent value="competencias" className="space-y-8">
+          <TabsContent value="competencias" className="space-y-6 sm:space-y-8 pt-16 sm:pt-20 lg:pt-24">
             {/* Gestión de Competencias - visible para todos */}
             <div>
               <CompetitionManager
@@ -1281,7 +1306,7 @@ function MainApp() {
           </TabsContent>
 
           {/* SECCIÓN 3.5: TEST CONTROL */}
-          <TabsContent value="test-control" className="space-y-8">
+          <TabsContent value="test-control" className="space-y-8 pt-16 sm:pt-20 lg:pt-24">
             <TestControlManager
               testControls={testControls}
               testResults={testResults}
@@ -1298,12 +1323,12 @@ function MainApp() {
           </TabsContent>
 
           {/* SECCIÓN 4: RÉCORDS */}
-          <TabsContent value="records" className="space-y-8">
+          <TabsContent value="records" className="space-y-6 sm:space-y-8 pt-16 sm:pt-20 lg:pt-24">
             <TeamRecordsBoard swimmers={swimmers} />
           </TabsContent>
 
           {/* SECCIÓN 5: LOGROS */}
-          <TabsContent value="logros" className="space-y-8">
+          <TabsContent value="logros" className="space-y-6 sm:space-y-8 pt-16 sm:pt-20 lg:pt-24">
             <AchievementsBoard
               swimmers={swimmers}
               attendanceRecords={attendanceRecords}
@@ -1313,7 +1338,7 @@ function MainApp() {
           </TabsContent>
 
           {/* SECCIÓN 6: ASISTENCIA */}
-          <TabsContent value="asistencia" className="space-y-8">
+          <TabsContent value="asistencia" className="space-y-6 sm:space-y-8 pt-16 sm:pt-20 lg:pt-24">
             <AttendanceManager 
               swimmers={swimmers} 
               sessions={allSessions.map((s, idx) => ({
@@ -1328,20 +1353,23 @@ function MainApp() {
           </TabsContent>
 
           {/* SECCIÓN 7: USUARIOS */}
-          <TabsContent value="usuarios" className="space-y-8">
+          <TabsContent value="usuarios" className="space-y-6 sm:space-y-8 pt-16 sm:pt-20 lg:pt-24">
             <UserManager swimmers={swimmers} />
           </TabsContent>
         </Tabs>
       </div>
 
       {/* Footer */}
-      <footer className="bg-[#003366] text-white mt-12 py-6">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-blue-200">
+      <footer className="bg-[#003366] text-white mt-8 sm:mt-12 py-4 sm:py-6">
+        <div className="container mx-auto px-3 sm:px-4 text-center">
+          <p className="text-sm sm:text-base text-blue-200">
             Equipo de Natación Master - Universidad de Chile
           </p>
-          <p className="text-sm text-blue-300 mt-2">
-            Temporada 2026-2027 | Macrociclo 44 semanas | 7 bloques de periodización ondulante | Marzo 2026 - Enero 2027
+          <p className="text-xs sm:text-sm text-blue-300 mt-1 sm:mt-2">
+            Temporada 2026-2027 | Macrociclo 44 semanas | 7 bloques de periodización ondulante
+          </p>
+          <p className="text-xs sm:text-sm text-blue-300 mt-0.5 sm:mt-1">
+            Marzo 2026 - Enero 2027
           </p>
         </div>
       </footer>

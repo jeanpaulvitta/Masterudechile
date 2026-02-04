@@ -69,48 +69,48 @@ export function WorkoutCard({
 
   return (
     <Card className="hover:shadow-lg transition-shadow h-full flex flex-col">
-      <CardHeader className="pb-4">
-        <div className="flex justify-between items-start gap-4">
-          <div className="flex-1">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Waves className="w-5 h-5 text-blue-600 flex-shrink-0" />
-              <span>{day}</span>
+      <CardHeader className="pb-3 sm:pb-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4">
+          <div className="flex-1 min-w-0">
+            <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+              <Waves className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600 flex-shrink-0" />
+              <span className="truncate">{day}</span>
             </CardTitle>
-            <p className="text-sm text-gray-600 mt-1">{date}</p>
+            <p className="text-xs sm:text-sm text-gray-600 mt-1">{date}</p>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge className={getMesocicloColor(mesociclo)}>{mesociclo}</Badge>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            <Badge className={`${getMesocicloColor(mesociclo)} text-xs`}>{mesociclo}</Badge>
             <Button
               variant="ghost"
               size="sm"
               onClick={handleDownloadPDF}
-              className="h-8 w-8 p-0"
+              className="h-7 w-7 sm:h-8 sm:w-8 p-0"
               title="Descargar PDF"
             >
-              <Download className="w-4 h-4" />
+              <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </Button>
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t">
+        <div className="flex flex-wrap gap-2 sm:gap-3 mt-2 sm:mt-3 pt-2 sm:pt-3 border-t">
           <div className="flex items-center gap-1.5">
-            <Ruler className="w-4 h-4 text-gray-500" />
-            <span className="text-sm font-medium">{distance}m</span>
+            <Ruler className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-500" />
+            <span className="text-xs sm:text-sm font-medium">{distance}m</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <Clock className="w-4 h-4 text-gray-500" />
-            <span className="text-sm font-medium">{duration} min</span>
+            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-gray-500" />
+            <span className="text-xs sm:text-sm font-medium">{duration} min</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div
-              className={`w-3 h-3 rounded-full ${getIntensityColor(intensity)}`}
+              className={`w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full ${getIntensityColor(intensity)}`}
             />
-            <span className="text-sm font-medium">{intensity}</span>
+            <span className="text-xs sm:text-sm font-medium">{intensity}</span>
           </div>
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4 flex-1">
+      <CardContent className="space-y-3 sm:space-y-4 flex-1">
         <div>
           <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
             Calentamiento

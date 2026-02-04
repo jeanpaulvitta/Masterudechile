@@ -54,7 +54,7 @@ export function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-10 w-10 rounded-full">
+        <Button variant="ghost" className="relative h-10 w-10 rounded-full z-20">
           <Avatar className="h-10 w-10 border-2 border-white shadow-md">
             <AvatarFallback className="bg-blue-600 text-white font-semibold">
               {getInitials(user.name)}
@@ -62,7 +62,7 @@ export function UserMenu() {
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-64" align="end">
+      <DropdownMenuContent className="w-64 z-50" align="end">
         <DropdownMenuLabel>
           <div className="flex flex-col space-y-2">
             <div className="flex items-center gap-2">

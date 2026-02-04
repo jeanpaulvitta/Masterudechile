@@ -45,26 +45,26 @@ export function SwimmerCard({ swimmer, attendanceRecords, onDelete, onEdit, onSa
   return (
     <Card className="hover:shadow-lg transition-shadow">
       <CardHeader>
-        <div className="flex justify-between items-start">
-          <div className="flex items-start gap-3">
-            <div className="bg-blue-100 rounded-full p-2">
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
+          <div className="flex items-start gap-3 flex-1 min-w-0">
+            <div className="bg-blue-100 rounded-full p-2 flex-shrink-0">
               <User className="w-5 h-5 text-blue-600" />
             </div>
-            <div>
-              <CardTitle className="text-lg">{swimmer.name}</CardTitle>
-              <div className="flex items-center gap-2 mt-1 text-sm text-gray-600">
-                <Mail className="w-3 h-3" />
-                <span>{swimmer.email}</span>
+            <div className="flex-1 min-w-0">
+              <CardTitle className="text-base sm:text-lg truncate">{swimmer.name}</CardTitle>
+              <div className="flex items-center gap-2 mt-1 text-xs sm:text-sm text-gray-600">
+                <Mail className="w-3 h-3 flex-shrink-0" />
+                <span className="truncate">{swimmer.email}</span>
               </div>
             </div>
           </div>
-          <Badge className={getScheduleColor(swimmer.schedule)}>
+          <Badge className={`${getScheduleColor(swimmer.schedule)} flex-shrink-0`}>
             {swimmer.schedule.toUpperCase()}
           </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-2 gap-2 text-sm">
+        <div className="grid grid-cols-2 gap-2 text-xs sm:text-sm">
           <div>
             <span className="text-gray-600">RUT:</span>
             <p className="font-semibold">{swimmer.rut || "No registrado"}</p>

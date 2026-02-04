@@ -129,41 +129,41 @@ export function MesocicloDialog({ mesociclo, sessions }: MesocicloDialogProps) {
       <DialogTrigger asChild>
         <div>
           <Card className={`hover:shadow-lg transition-all cursor-pointer hover:scale-[1.02] ${mesociclo.bgColor || 'bg-white'} ${mesociclo.borderColor ? `border-2 ${mesociclo.borderColor}` : ''}`}>
-            <CardContent className="pt-6 pb-4">
-              <div className="flex items-start gap-3 mb-3">
-                <div className={`p-2 rounded-lg ${mesociclo.bgColor || 'bg-gray-50'}`}>
-                  <Icon className={`w-6 h-6 ${mesociclo.color}`} />
+            <CardContent className="pt-4 sm:pt-6 pb-3 sm:pb-4">
+              <div className="flex items-start gap-2 sm:gap-3 mb-2 sm:mb-3">
+                <div className={`p-1.5 sm:p-2 rounded-lg ${mesociclo.bgColor || 'bg-gray-50'} flex-shrink-0`}>
+                  <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${mesociclo.color}`} />
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-lg mb-1">{mesociclo.name}</h3>
-                  <p className="text-xs text-gray-600 mb-2">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-sm sm:text-lg mb-0.5 sm:mb-1 truncate">{mesociclo.name}</h3>
+                  <p className="text-xs text-gray-600 mb-1 sm:mb-2 line-clamp-2">
                     {mesociclo.description}
                   </p>
                 </div>
               </div>
               
               {/* Información adicional */}
-              <div className="space-y-2 border-t pt-3">
+              <div className="space-y-1.5 sm:space-y-2 border-t pt-2 sm:pt-3">
                 {mesociclo.objective && (
-                  <div className="flex items-start gap-2">
-                    <span className="text-xs font-medium text-gray-500">Foco técnico:</span>
-                    <span className="text-xs text-gray-700 italic">{mesociclo.objective}</span>
+                  <div className="flex items-start gap-1.5 sm:gap-2">
+                    <span className="text-xs font-medium text-gray-500 flex-shrink-0">Foco técnico:</span>
+                    <span className="text-xs text-gray-700 italic line-clamp-2">{mesociclo.objective}</span>
                   </div>
                 )}
                 
                 {mesociclo.startDate && mesociclo.endDate && (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                     <span className="text-xs font-medium text-gray-500">Fechas:</span>
                     <span className="text-xs text-gray-700">{mesociclo.startDate} - {mesociclo.endDate}</span>
                   </div>
                 )}
                 
-                <div className="flex items-center justify-between gap-2 pt-2">
-                  <Badge variant="outline" className={`${mesociclo.color}`}>
+                <div className="flex items-center justify-between gap-2 pt-1 sm:pt-2">
+                  <Badge variant="outline" className={`${mesociclo.color} text-xs`}>
                     {mesociclo.weeks} semanas
                   </Badge>
                   <div className="flex items-center gap-1 text-gray-400">
-                    <span className="text-xs">Ver detalles</span>
+                    <span className="text-xs hidden sm:inline">Ver detalles</span>
                     <ChevronRight className="w-3 h-3" />
                   </div>
                 </div>
@@ -172,22 +172,22 @@ export function MesocicloDialog({ mesociclo, sessions }: MesocicloDialogProps) {
           </Card>
         </div>
       </DialogTrigger>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[95vw] sm:max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center gap-3 mb-2">
-            <div className={`p-3 rounded-lg ${mesociclo.bgColor || 'bg-gray-50'}`}>
-              <Icon className={`w-8 h-8 ${mesociclo.color}`} />
+          <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+            <div className={`p-2 sm:p-3 rounded-lg ${mesociclo.bgColor || 'bg-gray-50'} flex-shrink-0`}>
+              <Icon className={`w-6 h-6 sm:w-8 sm:h-8 ${mesociclo.color}`} />
             </div>
-            <div className="flex-1">
-              <DialogTitle className="text-2xl font-bold">{mesociclo.name}</DialogTitle>
-              <DialogDescription className="text-sm text-gray-600 mt-1">
+            <div className="flex-1 min-w-0">
+              <DialogTitle className="text-xl sm:text-2xl font-bold truncate">{mesociclo.name}</DialogTitle>
+              <DialogDescription className="text-xs sm:text-sm text-gray-600 mt-0.5 sm:mt-1 line-clamp-2">
                 {mesociclo.description}
               </DialogDescription>
             </div>
           </div>
           
           {/* Información del bloque */}
-          <div className={`${mesociclo.bgColor} border ${mesociclo.borderColor} rounded-lg p-4 space-y-2`}>
+          <div className={`${mesociclo.bgColor} border ${mesociclo.borderColor} rounded-lg p-3 sm:p-4 space-y-1.5 sm:space-y-2`}>
             {mesociclo.objective && (
               <div className="flex items-start gap-2">
                 <span className="text-sm font-semibold text-gray-700">🎯 Foco técnico:</span>
@@ -257,30 +257,30 @@ export function MesocicloDialog({ mesociclo, sessions }: MesocicloDialogProps) {
                 <AccordionItem 
                   key={weekNumber} 
                   value={`week-${weekNumber}`}
-                  className="border rounded-lg px-4 bg-white shadow-sm hover:shadow-md transition-shadow"
+                  className="border rounded-lg px-2 sm:px-4 bg-white shadow-sm hover:shadow-md transition-shadow"
                 >
-                  <AccordionTrigger className="hover:no-underline py-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full pr-4 gap-2 sm:gap-0">
-                      <div className="flex items-center gap-4">
+                  <AccordionTrigger className="hover:no-underline py-2 sm:py-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full pr-2 sm:pr-4 gap-1 sm:gap-0">
+                      <div className="flex items-center gap-2 sm:gap-4">
                         <div className="flex flex-col items-start">
-                          <span className="font-bold text-lg">Semana {weekLabel}</span>
-                          <span className="text-sm text-gray-600">{weekSessions[0]?.date || ''}</span>
+                          <span className="font-bold text-sm sm:text-lg">Semana {weekLabel}</span>
+                          <span className="text-[10px] sm:text-sm text-gray-600">{weekSessions[0]?.date || ''}</span>
                         </div>
                       </div>
-                      <div className="flex gap-6 text-sm">
+                      <div className="flex gap-3 sm:gap-6 text-xs sm:text-sm">
                         <div className="text-center">
-                          <p className="text-gray-600">Entrenamientos</p>
-                          <p className="font-bold">{weekWorkouts.length}</p>
+                          <p className="text-gray-600 text-[10px] sm:text-sm">Entrenos</p>
+                          <p className="font-bold text-xs sm:text-base">{weekWorkouts.length}</p>
                         </div>
                         {weekChallenge && (
                           <div className="text-center">
-                            <p className="text-gray-600">Desafío</p>
-                            <p className="font-bold">1</p>
+                            <p className="text-gray-600 text-[10px] sm:text-sm">Desafío</p>
+                            <p className="font-bold text-xs sm:text-base">1</p>
                           </div>
                         )}
                         <div className="text-center">
-                          <p className="text-gray-600">Distancia</p>
-                          <p className="font-bold">{(weekDistance / 1000).toFixed(1)}km</p>
+                          <p className="text-gray-600 text-[10px] sm:text-sm">Distancia</p>
+                          <p className="font-bold text-xs sm:text-base">{(weekDistance / 1000).toFixed(1)}km</p>
                         </div>
                       </div>
                     </div>

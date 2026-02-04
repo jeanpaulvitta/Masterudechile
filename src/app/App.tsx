@@ -498,8 +498,6 @@ function MainApp() {
   };
 
   const handleSyncFromLocal = () => syncWorkoutsFromLocal(workouts, setWorkouts, false);
-  
-  const handleForceSyncFromLocal = () => syncWorkoutsFromLocal(workouts, setWorkouts, true);
 
   const handleSyncFebruary = () => syncFebruaryWorkouts(workouts, setWorkouts);
 
@@ -1077,7 +1075,6 @@ function MainApp() {
                   onEditChallenge={handleEditChallenge}
                   onDeleteChallenge={handleDeleteChallenge}
                   onSyncFromLocal={handleSyncFromLocal}
-                  onForceSyncFromLocal={handleForceSyncFromLocal}
                 />
 
                 {/* Limpiador Avanzado de Duplicados */}

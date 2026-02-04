@@ -14,12 +14,17 @@ const supabaseAdmin = createClient(
 
 // Helper function to add timeout to promises
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessage: string): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<T>((_, reject) => 
-      setTimeout(() => reject(new Error(errorMessage)), timeoutMs)
-    )
-  ]);
+  const timeoutPromise = new Promise<T>((_, reject) => {
+    const timeoutId = setTimeout(() => {
+      console.error(`⏱️ TIMEOUT: ${errorMessage} (${timeoutMs}ms)`);
+      reject(new Error(errorMessage));
+    }, timeoutMs);
+    
+    // Clear timeout if promise resolves
+    promise.finally(() => clearTimeout(timeoutId));
+  });
+  
+  return Promise.race([promise, timeoutPromise]);
 }
 
 // Enable logger
@@ -129,17 +134,30 @@ app.get("/make-server-000a47d9/debug/swimmer/:id", async (c) => {
 // Get all swimmers
 app.get("/make-server-000a47d9/swimmers", async (c) => {
   try {
-    console.log("🏊 Fetching swimmers...");
+    console.log("🏊 Fetching swimmers - START");
+    const startTime = Date.now();
+    
+    console.log("📊 Creating KV promise...");
     const swimmersPromise = kv.get("swimmers:list");
+    
+    console.log("⏱️ Awaiting with 30s timeout...");
     const swimmers = await withTimeout(
       swimmersPromise,
-      20000, // Aumentar timeout a 20 segundos
+      30000, // Aumentar timeout a 30 segundos
       'Timeout fetching swimmers'
     );
-    console.log(`✅ Swimmers fetched: ${swimmers?.length || 0} items`);
+    
+    const elapsed = Date.now() - startTime;
+    console.log(`✅ Swimmers fetched: ${swimmers?.length || 0} items in ${elapsed}ms`);
+    
     return c.json({ swimmers: swimmers || [] });
   } catch (error) {
-    console.error("❌ Error fetching swimmers:", error);
+    const elapsed = Date.now();
+    console.error(`❌ Error fetching swimmers after ${elapsed}ms:`, error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("❌ Error details:", errorMessage);
+    console.error("❌ Error stack:", error instanceof Error ? error.stack : 'No stack');
+    
     // Retornar array vacío en lugar de error 500
     return c.json({ swimmers: [] }, 200);
   }
@@ -216,7 +234,7 @@ app.delete("/make-server-000a47d9/swimmers/:id", async (c) => {
   try {
     const id = c.req.param("id");
     const swimmersPromise = kv.get("swimmers:list");
-    const swimmers = await withTimeout(swimmersPromise, 8000, 'Timeout fetching swimmers') || [];
+    const swimmers = await withTimeout(swimmersPromise, 30000, 'Timeout fetching swimmers') || [];
     
     const filteredSwimmers = swimmers.filter((s: any) => s.id !== id);
     
@@ -225,15 +243,15 @@ app.delete("/make-server-000a47d9/swimmers/:id", async (c) => {
     }
     
     const savePromise = kv.set("swimmers:list", filteredSwimmers);
-    await withTimeout(savePromise, 8000, 'Timeout saving swimmers');
+    await withTimeout(savePromise, 30000, 'Timeout saving swimmers');
     
     // Also delete all attendance records for this swimmer
     const attendanceKeysPromise = kv.getByPrefix(`attendance:${id}:`);
-    const attendanceKeys = await withTimeout(attendanceKeysPromise, 8000, 'Timeout fetching attendance keys');
+    const attendanceKeys = await withTimeout(attendanceKeysPromise, 30000, 'Timeout fetching attendance keys');
     
     if (attendanceKeys && attendanceKeys.length > 0) {
       const deletePromise = kv.mdel(attendanceKeys.map((item: any) => item.key));
-      await withTimeout(deletePromise, 8000, 'Timeout deleting attendance records');
+      await withTimeout(deletePromise, 30000, 'Timeout deleting attendance records');
     }
     
     return c.json({ success: true });
@@ -251,7 +269,7 @@ app.get("/make-server-000a47d9/attendance", async (c) => {
     const recordsPromise = kv.getByPrefix("attendance:");
     const records = await withTimeout(
       recordsPromise,
-      15000,
+      30000,
       'Timeout fetching attendance records'
     );
     
@@ -319,7 +337,7 @@ app.delete("/make-server-000a47d9/attendance/:id", async (c) => {
     const allRecordsPromise = kv.getByPrefix("attendance:");
     const allRecords = await withTimeout(
       allRecordsPromise,
-      10000,
+      30000,
       'Timeout while searching for attendance record'
     );
     
@@ -381,7 +399,7 @@ app.get("/make-server-000a47d9/competitions", async (c) => {
 app.get("/make-server-000a47d9/workouts", async (c) => {
   try {
     const workoutsPromise = kv.get("workouts:list");
-    const workouts = await withTimeout(workoutsPromise, 10000, 'Timeout fetching workouts');
+    const workouts = await withTimeout(workoutsPromise, 30000, 'Timeout fetching workouts');
     // Filtrar solo los no eliminados por defecto
     const activeWorkouts = (workouts || []).filter((w: any) => !w.deleted);
     return c.json({ workouts: activeWorkouts });
@@ -907,9 +925,9 @@ app.post("/make-server-000a47d9/competition-results", async (c) => {
     const competitionsPromise = kv.get("competitions:list");
     
     const [swimmers, participations, competitions] = await Promise.all([
-      withTimeout(swimmersPromise, 8000, 'Timeout fetching swimmers'),
-      withTimeout(participationsPromise, 8000, 'Timeout fetching participations'),
-      withTimeout(competitionsPromise, 8000, 'Timeout fetching competitions')
+      withTimeout(swimmersPromise, 30000, 'Timeout fetching swimmers'),
+      withTimeout(participationsPromise, 30000, 'Timeout fetching participations'),
+      withTimeout(competitionsPromise, 30000, 'Timeout fetching competitions')
     ]);
     
     const swimmersList = swimmers || [];
@@ -1026,8 +1044,8 @@ app.post("/make-server-000a47d9/competition-results", async (c) => {
     const saveParticipationsPromise = kv.set("swimmer_competitions:list", participationsList);
     
     await Promise.all([
-      withTimeout(saveSwimmersPromise, 10000, 'Timeout saving swimmers'),
-      withTimeout(saveParticipationsPromise, 10000, 'Timeout saving participations')
+      withTimeout(saveSwimmersPromise, 30000, 'Timeout saving swimmers'),
+      withTimeout(saveParticipationsPromise, 30000, 'Timeout saving participations')
     ]);
     
     console.log(`✅ Competition results updated for swimmer ${swimmerId} in competition ${competitionId}`);

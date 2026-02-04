@@ -31,12 +31,27 @@ export const set = async (key: string, value: any): Promise<void> => {
 
 // Get retrieves a key-value pair from the database.
 export const get = async (key: string): Promise<any> => {
-  const supabase = client()
-  const { data, error } = await supabase.from("kv_store_000a47d9").select("value").eq("key", key).maybeSingle();
-  if (error) {
-    throw new Error(error.message);
+  const startTime = Date.now();
+  console.log(`📦 KV GET: ${key} - START`);
+  
+  try {
+    const supabase = client();
+    const { data, error } = await supabase.from("kv_store_000a47d9").select("value").eq("key", key).maybeSingle();
+    
+    const elapsed = Date.now() - startTime;
+    console.log(`📦 KV GET: ${key} - COMPLETE in ${elapsed}ms`);
+    
+    if (error) {
+      console.error(`❌ KV GET ERROR: ${key}:`, error.message);
+      throw new Error(error.message);
+    }
+    
+    return data?.value;
+  } catch (error) {
+    const elapsed = Date.now() - startTime;
+    console.error(`❌ KV GET FAILED: ${key} after ${elapsed}ms:`, error);
+    throw error;
   }
-  return data?.value;
 };
 
 // Delete deletes a key-value pair from the database.

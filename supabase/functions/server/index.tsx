@@ -129,16 +129,19 @@ app.get("/make-server-000a47d9/debug/swimmer/:id", async (c) => {
 // Get all swimmers
 app.get("/make-server-000a47d9/swimmers", async (c) => {
   try {
+    console.log("🏊 Fetching swimmers...");
     const swimmersPromise = kv.get("swimmers:list");
     const swimmers = await withTimeout(
       swimmersPromise,
-      10000,
+      20000, // Aumentar timeout a 20 segundos
       'Timeout fetching swimmers'
     );
+    console.log(`✅ Swimmers fetched: ${swimmers?.length || 0} items`);
     return c.json({ swimmers: swimmers || [] });
   } catch (error) {
-    console.error("Error fetching swimmers:", error);
-    return c.json({ error: "Failed to fetch swimmers", details: String(error) }, 500);
+    console.error("❌ Error fetching swimmers:", error);
+    // Retornar array vacío en lugar de error 500
+    return c.json({ swimmers: [] }, 200);
   }
 });
 

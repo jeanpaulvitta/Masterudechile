@@ -1039,7 +1039,7 @@ function MainApp() {
           <ResponsiveTabsNav userRole={user?.role} />
 
           {/* SECCIÓN 1: ENTRENAMIENTOS Y COMPETENCIAS */}
-          <TabsContent value="entrenamientos" className="space-y-6 sm:space-y-8 pt-16 sm:pt-20 lg:pt-24">
+          <TabsContent value="entrenamientos" className="space-y-6 sm:space-y-8 sm:pt-20 lg:pt-24 rounded-tl-[10px] rounded-tr-[0px] rounded-bl-[0px] rounded-br-[0px] p-[0px] mx-[0px] my-[50px]">
             {/* Mesociclos Overview */}
             <div>
               <div className="mb-6 sm:mb-8">
@@ -1104,7 +1104,7 @@ function MainApp() {
           </TabsContent>
 
           {/* SECCIÓN 1.5: CALENDARIO INTEGRADO */}
-          <TabsContent value="calendario" className="space-y-8 pt-16 sm:pt-20 lg:pt-24">
+          <TabsContent value="calendario" className="space-y-8 pt-24 sm:pt-20 lg:pt-24">
             <IntegratedCalendar
               sessions={allSessionsWithDates.map((s, idx) => ({
                 id: `session_${s.week}_${idx}`,
@@ -1125,7 +1125,7 @@ function MainApp() {
           </TabsContent>
 
           {/* SECCIÓN 2: NADADORES */}
-          <TabsContent value="nadadores" className="space-y-4 sm:space-y-8 pt-16 sm:pt-20 lg:pt-24">
+          <TabsContent value="nadadores" className="space-y-4 sm:space-y-8 pt-24 sm:pt-20 lg:pt-24">
             <div className="flex items-center justify-between gap-2 sm:gap-3 mb-4 sm:mb-6">
               <div className="flex items-center gap-2 sm:gap-3">
                 <Users className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600" />
@@ -1280,7 +1280,7 @@ function MainApp() {
           </TabsContent>
 
           {/* SECCIÓN 3: COMPETENCIAS */}
-          <TabsContent value="competencias" className="space-y-6 sm:space-y-8 pt-16 sm:pt-20 lg:pt-24">
+          <TabsContent value="competencias" className="space-y-6 sm:space-y-8 pt-24 sm:pt-20 lg:pt-24">
             {/* Gestión de Competencias - visible para todos */}
             <div>
               <CompetitionManager
@@ -1306,7 +1306,7 @@ function MainApp() {
           </TabsContent>
 
           {/* SECCIÓN 3.5: TEST CONTROL */}
-          <TabsContent value="test-control" className="space-y-8 pt-16 sm:pt-20 lg:pt-24">
+          <TabsContent value="test-control" className="space-y-8 pt-24 sm:pt-20 lg:pt-24">
             <TestControlManager
               testControls={testControls}
               testResults={testResults}
@@ -1323,12 +1323,12 @@ function MainApp() {
           </TabsContent>
 
           {/* SECCIÓN 4: RÉCORDS */}
-          <TabsContent value="records" className="space-y-6 sm:space-y-8 pt-16 sm:pt-20 lg:pt-24">
+          <TabsContent value="records" className="space-y-6 sm:space-y-8 pt-24 sm:pt-20 lg:pt-24">
             <TeamRecordsBoard swimmers={swimmers} />
           </TabsContent>
 
           {/* SECCIÓN 5: LOGROS */}
-          <TabsContent value="logros" className="space-y-6 sm:space-y-8 pt-16 sm:pt-20 lg:pt-24">
+          <TabsContent value="logros" className="space-y-6 sm:space-y-8 pt-24 sm:pt-20 lg:pt-24">
             <AchievementsBoard
               swimmers={swimmers}
               attendanceRecords={attendanceRecords}
@@ -1338,7 +1338,7 @@ function MainApp() {
           </TabsContent>
 
           {/* SECCIÓN 6: ASISTENCIA */}
-          <TabsContent value="asistencia" className="space-y-6 sm:space-y-8 pt-16 sm:pt-20 lg:pt-24">
+          <TabsContent value="asistencia" className="space-y-6 sm:space-y-8 pt-24 sm:pt-20 lg:pt-24">
             <AttendanceManager 
               swimmers={swimmers} 
               sessions={allSessions.map((s, idx) => ({
@@ -1353,7 +1353,7 @@ function MainApp() {
           </TabsContent>
 
           {/* SECCIÓN 7: USUARIOS */}
-          <TabsContent value="usuarios" className="space-y-6 sm:space-y-8 pt-16 sm:pt-20 lg:pt-24">
+          <TabsContent value="usuarios" className="space-y-6 sm:space-y-8 pt-24 sm:pt-20 lg:pt-24">
             <UserManager swimmers={swimmers} />
           </TabsContent>
         </Tabs>

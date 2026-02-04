@@ -395,46 +395,31 @@ export function TestControlManager({
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
         <div>
-          <h2 className="flex items-center gap-2">
-            <ClipboardList className="w-6 h-6 text-blue-600" />
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <ClipboardList className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
             Test Control
           </h2>
-          <p className="text-sm text-gray-600 mt-1">
-            Evaluaciones periódicas para medir progreso y rendimiento
+          <p className="text-xs sm:text-sm text-gray-600 mt-1">
+            Evaluación de rendimiento y progreso
           </p>
         </div>
-        
-        <div className="flex gap-2">
-          {/* Botón sincronizar */}
+        <div className="flex gap-2 w-full sm:w-auto">
           {onSyncData && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleSync}
-              disabled={isSyncing}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={onSyncData}
+              className="flex-1 sm:flex-none text-xs sm:text-sm"
             >
-              <RefreshCw className={`w-4 h-4 mr-2 ${isSyncing ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">{isSyncing ? 'Sincronizando...' : 'Sincronizar'}</span>
+              <RefreshCw className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Sincronizar</span>
               <span className="sm:hidden">Sync</span>
             </Button>
           )}
-          
-          {/* Botón descargar PDF */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => generateTestControlsPDF(testControls, testResults, swimmers)}
-            disabled={testControls.length === 0}
-          >
-            <FileDown className="w-4 h-4 mr-2" />
-            <span className="hidden sm:inline">Descargar PDF</span>
-            <span className="sm:hidden">PDF</span>
-          </Button>
-          
           {canManageTests && (
             <Dialog open={dialogOpen} onOpenChange={(open) => {
               setDialogOpen(open);
@@ -613,34 +598,35 @@ export function TestControlManager({
           ) : (
             sortedTests.map(test => (
               <Card key={test.id}>
-                <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <CardTitle className="flex items-center gap-2">
-                        {test.name}
+                <CardHeader className="pb-3">
+                  <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
+                    <div className="flex-1 w-full">
+                      <CardTitle className="flex flex-col sm:flex-row sm:items-center gap-2 text-base sm:text-lg">
+                        <span className="break-words">{test.name}</span>
                         {test.mesociclo && (
-                          <Badge variant="outline">{test.mesociclo}</Badge>
+                          <Badge variant="outline" className="w-fit text-xs">{test.mesociclo}</Badge>
                         )}
                       </CardTitle>
-                      <CardDescription className="flex items-center gap-4 mt-2">
+                      <CardDescription className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-2 text-xs sm:text-sm">
                         <span className="flex items-center gap-1">
-                          <CalendarDays className="w-4 h-4" />
+                          <CalendarDays className="w-3 h-3 sm:w-4 sm:h-4" />
                           {new Date(test.date).toLocaleDateString('es-CL')}
                         </span>
                         <span className="flex items-center gap-1">
-                          <Timer className="w-4 h-4" />
+                          <Timer className="w-3 h-3 sm:w-4 sm:h-4" />
                           {test.testItems.length} prueba{test.testItems.length !== 1 ? 's' : ''}
                         </span>
                       </CardDescription>
                       {test.description && (
-                        <p className="text-sm text-gray-600 mt-2">{test.description}</p>
+                        <p className="text-xs sm:text-sm text-gray-600 mt-2">{test.description}</p>
                       )}
                     </div>
 
                     {canManageTests && (
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => handleEditTest(test)}>
-                          <Edit2 className="w-4 h-4" />
+                      <div className="flex gap-2 w-full sm:w-auto">
+                        <Button size="sm" variant="outline" onClick={() => handleEditTest(test)} className="flex-1 sm:flex-none">
+                          <Edit2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                          <span className="ml-1 sm:hidden">Editar</span>
                         </Button>
                         <Button 
                           size="sm" 
@@ -649,30 +635,33 @@ export function TestControlManager({
                             setTestToDelete(test.id);
                             setDeleteConfirmOpen(true);
                           }}
+                          className="flex-1 sm:flex-none"
                         >
-                          <Trash2 className="w-4 h-4 text-red-600" />
+                          <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 text-red-600" />
+                          <span className="ml-1 sm:hidden">Eliminar</span>
                         </Button>
                       </div>
                     )}
                   </div>
                 </CardHeader>
 
-                <CardContent>
+                <CardContent className="pt-0">
                   <div className="space-y-3">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                       {test.testItems.map(item => (
                         <div key={item.id} className="p-2 bg-blue-50 rounded border border-blue-200">
-                          <p className="font-medium text-sm">{item.distance}m {item.style}</p>
+                          <p className="font-medium text-xs sm:text-sm">{item.distance}m {item.style}</p>
                         </div>
                       ))}
                     </div>
 
                     <Button 
-                      className="w-full mt-3" 
+                      className="w-full mt-3 text-sm" 
                       variant="outline"
                       onClick={() => handleOpenResults(test)}
+                      size="sm"
                     >
-                      <Trophy className="w-4 h-4 mr-2" />
+                      <Trophy className="w-3 h-3 sm:w-4 sm:h-4 mr-2" />
                       Registrar Resultados
                     </Button>
                   </div>

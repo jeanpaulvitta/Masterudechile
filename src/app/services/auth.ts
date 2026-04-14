@@ -18,6 +18,15 @@ async function initializeAdminUser() {
       }
     });
     
+    // Verificar si la respuesta es JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      console.error('❌ Server returned non-JSON response:', response.status, response.statusText);
+      const textResponse = await response.text();
+      console.error('Response body:', textResponse.substring(0, 200));
+      return;
+    }
+    
     if (!response.ok) {
       const errorData = await response.json();
       console.error('❌ Failed to initialize admin:', errorData);
@@ -28,11 +37,16 @@ async function initializeAdminUser() {
     console.log('✅ Admin user initialized in Supabase Auth:', data);
   } catch (error) {
     console.error('❌ Error initializing admin:', error);
+    if (error instanceof Error) {
+      console.error('Error details:', error.message);
+    }
   }
 }
 
-// Llamar la inicialización
-initializeAdminUser();
+// ⚠️ DESHABILITADO: La inicialización automática causa errores si el servidor no está configurado
+// Para crear el admin, usa el botón "Crear Admin Directo" en la página de login
+// O ejecuta: createAdminDirectly() desde la consola
+// initializeAdminUser();
 
 // ==================== AUTHENTICATION ====================
 

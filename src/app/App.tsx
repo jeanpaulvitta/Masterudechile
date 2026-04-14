@@ -6,6 +6,7 @@ import { workouts2026_2027 } from "./data/workouts2026-2027";
 import { calculateAge, calculateMasterCategory } from "./utils/swimmerUtils";
 import { useState, useEffect } from "react";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
+import { QueryProvider } from "./contexts/QueryProvider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { Card, CardContent } from "./components/ui/card";
 import { Button } from "./components/ui/button";
@@ -1393,16 +1394,18 @@ function MainApp() {
 
 export default function App() {
   console.log('🚀 App component rendering...');
-  
+
   return (
-    <AuthProvider>
-      <div>
-        <ProtectedRoute>
-          <MainApp />
-        </ProtectedRoute>
-        <PWAInstallPrompt />
-        <Toaster />
-      </div>
-    </AuthProvider>
+    <QueryProvider>
+      <AuthProvider>
+        <div>
+          <ProtectedRoute>
+            <MainApp />
+          </ProtectedRoute>
+          <PWAInstallPrompt />
+          <Toaster />
+        </div>
+      </AuthProvider>
+    </QueryProvider>
   );
 }

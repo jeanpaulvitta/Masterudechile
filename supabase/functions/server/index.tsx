@@ -6,10 +6,30 @@ import { createClient } from 'npm:@supabase/supabase-js@^2';
 
 const app = new Hono();
 
+// Log environment variables (sin mostrar el valor completo de la key)
+console.log('🔧 Checking Supabase configuration...');
+const supabaseUrl = Deno.env.get('SUPABASE_URL');
+const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+
+console.log('SUPABASE_URL:', supabaseUrl || 'NOT SET');
+console.log('SERVICE_ROLE_KEY:', supabaseKey ? `${supabaseKey.substring(0, 20)}...` : 'NOT SET');
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error('❌ ERROR: Missing Supabase configuration!');
+  console.error('Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables');
+}
+
 // Crear cliente de Supabase con SERVICE ROLE para operaciones de administración
 const supabaseAdmin = createClient(
-  Deno.env.get('SUPABASE_URL') ?? '',
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  supabaseUrl ?? '',
+  supabaseKey ?? '',
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false
+    }
+  }
 );
 
 // Helper function to add timeout to promises
@@ -79,6 +99,49 @@ app.notFound((c) => {
 // Health check endpoint
 app.get("/make-server-000a47d9/health", (c) => {
   return c.json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+// Supabase Auth diagnostic endpoint
+app.get("/make-server-000a47d9/debug/auth-status", async (c) => {
+  try {
+    const hasUrl = !!Deno.env.get('SUPABASE_URL');
+    const hasServiceKey = !!Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    const result: any = {
+      configured: hasUrl && hasServiceKey,
+      supabase_url: hasUrl ? Deno.env.get('SUPABASE_URL') : 'NOT SET',
+      service_key_present: hasServiceKey,
+      timestamp: new Date().toISOString()
+    };
+    
+    // Try to list users if configured
+    if (hasUrl && hasServiceKey) {
+      try {
+        const { data, error } = await supabaseAdmin.auth.admin.listUsers();
+        if (error) {
+          result.auth_test = 'FAILED';
+          result.auth_error = error.message;
+        } else {
+          result.auth_test = 'SUCCESS';
+          result.total_users = data.users.length;
+          result.admin_exists = data.users.some((u: any) => u.email === 'admin@uch.cl');
+        }
+      } catch (err) {
+        result.auth_test = 'ERROR';
+        result.auth_error = String(err);
+      }
+    } else {
+      result.auth_test = 'SKIPPED - Missing configuration';
+    }
+    
+    return c.json(result);
+  } catch (error) {
+    console.error("Error in auth status endpoint:", error);
+    return c.json({ 
+      error: "Failed to check auth status", 
+      details: String(error) 
+    }, 500);
+  }
 });
 
 // Debug endpoint to check KV store contents
@@ -1653,15 +1716,30 @@ app.post("/make-server-000a47d9/users/reset-admin", async (c) => {
 app.post("/make-server-000a47d9/auth/init-admin", async (c) => {
   try {
     console.log("🔧 Initializing admin in Supabase Auth...");
+    console.log("SUPABASE_URL:", Deno.env.get('SUPABASE_URL'));
+    console.log("SERVICE_ROLE_KEY present:", !!Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'));
+    
+    // Check if Supabase client is configured
+    if (!Deno.env.get('SUPABASE_URL') || !Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')) {
+      return c.json({ 
+        error: "Supabase not configured", 
+        details: "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables" 
+      }, 500);
+    }
     
     // Check if admin already exists in Supabase Auth
+    console.log("Listing users...");
     const { data: existingUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers();
     
     if (listError) {
       console.error("Error listing users:", listError);
-      throw listError;
+      return c.json({ 
+        error: "Failed to list users", 
+        details: listError.message || String(listError) 
+      }, 500);
     }
     
+    console.log(`Found ${existingUsers.users.length} existing users`);
     const adminExists = existingUsers.users.find((u: any) => u.email === "admin@uch.cl");
     
     if (adminExists) {
@@ -1670,6 +1748,7 @@ app.post("/make-server-000a47d9/auth/init-admin", async (c) => {
     }
     
     // Create admin user in Supabase Auth
+    console.log("Creating admin user...");
     const { data: authData, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email: "admin@uch.cl",
       password: "admin123",
@@ -1682,7 +1761,10 @@ app.post("/make-server-000a47d9/auth/init-admin", async (c) => {
     
     if (createError) {
       console.error("Error creating admin:", createError);
-      throw createError;
+      return c.json({ 
+        error: "Failed to create admin", 
+        details: createError.message || String(createError) 
+      }, 500);
     }
     
     console.log("✅ Admin user created in Supabase Auth:", authData.user.id);
@@ -1693,7 +1775,11 @@ app.post("/make-server-000a47d9/auth/init-admin", async (c) => {
     });
   } catch (error) {
     console.error("Error initializing admin:", error);
-    return c.json({ error: "Failed to initialize admin", details: String(error) }, 500);
+    return c.json({ 
+      error: "Failed to initialize admin", 
+      details: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    }, 500);
   }
 });
 
@@ -1701,15 +1787,30 @@ app.post("/make-server-000a47d9/auth/init-admin", async (c) => {
 app.post("/make-server-000a47d9/auth/reset-admin", async (c) => {
   try {
     console.log("🔧 Resetting admin password in Supabase Auth...");
+    console.log("SUPABASE_URL:", Deno.env.get('SUPABASE_URL'));
+    console.log("SERVICE_ROLE_KEY present:", !!Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'));
+    
+    // Check if Supabase client is configured
+    if (!Deno.env.get('SUPABASE_URL') || !Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')) {
+      return c.json({ 
+        error: "Supabase not configured", 
+        details: "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables" 
+      }, 500);
+    }
     
     // Check if admin exists
+    console.log("Listing users...");
     const { data: existingUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers();
     
     if (listError) {
       console.error("Error listing users:", listError);
-      throw listError;
+      return c.json({ 
+        error: "Failed to list users", 
+        details: listError.message || String(listError) 
+      }, 500);
     }
     
+    console.log(`Found ${existingUsers.users.length} existing users`);
     const adminUser = existingUsers.users.find((u: any) => u.email === "admin@uch.cl");
     
     if (!adminUser) {
@@ -1727,7 +1828,10 @@ app.post("/make-server-000a47d9/auth/reset-admin", async (c) => {
       
       if (createError) {
         console.error("Error creating admin:", createError);
-        throw createError;
+        return c.json({ 
+          error: "Failed to create admin", 
+          details: createError.message || String(createError) 
+        }, 500);
       }
       
       console.log("✅ Admin user created");
@@ -1739,6 +1843,7 @@ app.post("/make-server-000a47d9/auth/reset-admin", async (c) => {
     }
     
     // Reset password
+    console.log("Resetting password for admin user:", adminUser.id);
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
       adminUser.id,
       { password: "admin123" }
@@ -1746,8 +1851,27 @@ app.post("/make-server-000a47d9/auth/reset-admin", async (c) => {
     
     if (updateError) {
       console.error("Error resetting admin password:", updateError);
-      throw updateError;
+      return c.json({ 
+        error: "Failed to reset password", 
+        details: updateError.message || String(updateError) 
+      }, 500);
     }
+    
+    console.log("✅ Admin password reset successfully");
+    return c.json({ 
+      message: "Admin password reset successfully",
+      email: "admin@uch.cl",
+      password: "admin123"
+    });
+  } catch (error) {
+    console.error("Error resetting admin:", error);
+    return c.json({ 
+      error: "Failed to reset admin", 
+      details: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    }, 500);
+  }
+});
     
     console.log("✅ Admin password reset successfully");
     return c.json({ 

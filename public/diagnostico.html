@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diagnóstico del Servidor - Natación Master UCH</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .test-section {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        .test-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .status.loading {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .result {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+        
+        button:hover {
+            background: #5568d3;
+        }
+        
+        button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .info-box {
+            background: #eff6ff;
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 4px;
+        }
+        
+        .info-box p {
+            color: #1e40af;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f4f6;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 Diagnóstico del Servidor</h1>
+            <p class="subtitle">Natación Master UCH - Sistema de pruebas</p>
+        </div>
+        
+        <!-- Test 1: Health Check -->
+        <div class="test-section">
+            <div class="test-title">
+                1️⃣ Estado del Servidor
+                <span id="status-health" class="status loading">Esperando...</span>
+            </div>
+            <p>Verificando si el servidor Edge Function está en línea</p>
+            <div id="result-health" class="result" style="display:none;"></div>
+            <div class="actions">
+                <button onclick="testHealth()">▶️ Ejecutar Test</button>
+            </div>
+        </div>
+        
+        <!-- Test 2: Auth Status -->
+        <div class="test-section">
+            <div class="test-title">
+                2️⃣ Configuración de Supabase Auth
+                <span id="status-auth" class="status loading">Esperando...</span>
+            </div>
+            <p>Verificando variables de entorno y conexión a Supabase Auth</p>
+            <div id="result-auth" class="result" style="display:none;"></div>
+            <div class="actions">
+                <button onclick="testAuth()">▶️ Ejecutar Test</button>
+            </div>
+        </div>
+        
+        <!-- Test 3: List Users -->
+        <div class="test-section">
+            <div class="test-title">
+                3️⃣ Listar Usuarios
+                <span id="status-users" class="status loading">Esperando...</span>
+            </div>
+            <p>Listando todos los usuarios registrados en Supabase Auth</p>
+            <div id="result-users" class="result" style="display:none;"></div>
+            <div class="actions">
+                <button onclick="testUsers()">▶️ Ejecutar Test</button>
+            </div>
+        </div>
+        
+        <!-- Test 4: Init Admin -->
+        <div class="test-section">
+            <div class="test-title">
+                4️⃣ Inicializar Admin
+                <span id="status-init" class="status loading">Esperando...</span>
+            </div>
+            <p>Crear usuario admin@uch.cl con contraseña admin123</p>
+            <div id="result-init" class="result" style="display:none;"></div>
+            <div class="actions">
+                <button onclick="testInitAdmin()">▶️ Ejecutar Test</button>
+            </div>
+            <div class="info-box">
+                <p><strong>ℹ️ Nota:</strong> Este test creará el usuario admin si no existe. Credenciales: admin@uch.cl / admin123</p>
+            </div>
+        </div>
+        
+        <!-- Test 5: Reset Admin -->
+        <div class="test-section">
+            <div class="test-title">
+                5️⃣ Resetear Admin
+                <span id="status-reset" class="status loading">Esperando...</span>
+            </div>
+            <p>Resetear contraseña del admin a admin123</p>
+            <div id="result-reset" class="result" style="display:none;"></div>
+            <div class="actions">
+                <button onclick="testResetAdmin()">▶️ Ejecutar Test</button>
+            </div>
+        </div>
+        
+        <!-- Run All Tests -->
+        <div class="test-section" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <button onclick="runAllTests()" style="width: 100%; padding: 15px; font-size: 16px;">
+                🚀 Ejecutar Todos los Tests
+            </button>
+        </div>
+    </div>
+    
+    <script>
+        const API_URL = 'https://rztiyofwhlwvofwhcgue.supabase.co/functions/v1/make-server-000a47d9';
+        const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6dGl5b2Z3aGx3dm9md2hjZ3VlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwMTk3ODUsImV4cCI6MjA4MjU5NTc4NX0.cuYH2GPWE4SocLIEHUaPIa8l2wNBifT9NdLKjyeaDsE';
+        
+        function updateStatus(testId, status, result) {
+            const statusEl = document.getElementById(`status-${testId}`);
+            const resultEl = document.getElementById(`result-${testId}`);
+            
+            statusEl.className = `status ${status}`;
+            statusEl.textContent = status === 'loading' ? 'Ejecutando...' : (status === 'success' ? '✅ Éxito' : '❌ Error');
+            
+            if (result) {
+                resultEl.style.display = 'block';
+                resultEl.textContent = JSON.stringify(result, null, 2);
+            }
+        }
+        
+        async function testHealth() {
+            updateStatus('health', 'loading');
+            try {
+                const response = await fetch(`${API_URL}/health`, {
+                    headers: { 'Authorization': `Bearer ${ANON_KEY}` }
+                });
+                const data = await response.json();
+                updateStatus('health', 'success', data);
+            } catch (error) {
+                updateStatus('health', 'error', { error: error.message });
+            }
+        }
+        
+        async function testAuth() {
+            updateStatus('auth', 'loading');
+            try {
+                const response = await fetch(`${API_URL}/debug/auth-status`, {
+                    headers: { 'Authorization': `Bearer ${ANON_KEY}` }
+                });
+                const data = await response.json();
+                updateStatus('auth', data.configured ? 'success' : 'error', data);
+            } catch (error) {
+                updateStatus('auth', 'error', { error: error.message });
+            }
+        }
+        
+        async function testUsers() {
+            updateStatus('users', 'loading');
+            try {
+                const response = await fetch(`${API_URL}/users`, {
+                    headers: { 'Authorization': `Bearer ${ANON_KEY}` }
+                });
+                const data = await response.json();
+                updateStatus('users', 'success', data);
+            } catch (error) {
+                updateStatus('users', 'error', { error: error.message });
+            }
+        }
+        
+        async function testInitAdmin() {
+            updateStatus('init', 'loading');
+            try {
+                const response = await fetch(`${API_URL}/auth/init-admin`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${ANON_KEY}`
+                    }
+                });
+                const data = await response.json();
+                updateStatus('init', response.ok ? 'success' : 'error', data);
+            } catch (error) {
+                updateStatus('init', 'error', { error: error.message });
+            }
+        }
+        
+        async function testResetAdmin() {
+            updateStatus('reset', 'loading');
+            try {
+                const response = await fetch(`${API_URL}/auth/reset-admin`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${ANON_KEY}`
+                    }
+                });
+                const data = await response.json();
+                updateStatus('reset', response.ok ? 'success' : 'error', data);
+            } catch (error) {
+                updateStatus('reset', 'error', { error: error.message });
+            }
+        }
+        
+        async function runAllTests() {
+            console.log('🚀 Ejecutando todos los tests...');
+            await testHealth();
+            await new Promise(r => setTimeout(r, 500));
+            await testAuth();
+            await new Promise(r => setTimeout(r, 500));
+            await testUsers();
+            await new Promise(r => setTimeout(r, 500));
+            await testInitAdmin();
+            await new Promise(r => setTimeout(r, 500));
+            await testResetAdmin();
+            console.log('✅ Todos los tests completados');
+        }
+    </script>
+</body>
+</html>

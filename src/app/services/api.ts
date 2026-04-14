@@ -137,15 +137,29 @@ export interface AttendanceRecord {
   notes?: string;
 }
 
-export async function fetchAttendance(): Promise<AttendanceRecord[]> {
+interface FetchAttendanceParams {
+  swimmerId?: string;
+  startDate?: string;
+  endDate?: string;
+  limit?: number;
+}
+
+export async function fetchAttendance(params?: FetchAttendanceParams): Promise<AttendanceRecord[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/attendance`, { headers });
+    // Construir query params
+    const url = new URL(`${API_BASE_URL}/attendance`);
+    if (params?.swimmerId) url.searchParams.append('swimmerId', params.swimmerId);
+    if (params?.startDate) url.searchParams.append('startDate', params.startDate);
+    if (params?.endDate) url.searchParams.append('endDate', params.endDate);
+    if (params?.limit) url.searchParams.append('limit', params.limit.toString());
+
+    const response = await fetch(url.toString(), { headers });
     if (!response.ok) {
       const error = await response.json();
       throw new Error(`Failed to fetch attendance: ${error.error || response.statusText}`);
     }
     const data = await response.json();
-    console.log('✅ Attendance fetched from server:', data.attendance);
+    console.log('✅ Attendance fetched from server:', data.attendance?.length || 0);
     return data.attendance;
   } catch (error) {
     console.error('❌ Error fetching attendance:', error);
@@ -388,15 +402,29 @@ export async function updateCompetitionResults(
 
 // ==================== WORKOUTS API ====================
 
-export async function fetchWorkouts(): Promise<Workout[]> {
+interface FetchWorkoutsParams {
+  startDate?: string;
+  endDate?: string;
+  limit?: number;
+}
+
+export async function fetchWorkouts(params?: FetchWorkoutsParams): Promise<Workout[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/workouts`, { headers });
+    // Construir query params para filtrar en el cliente
+    // NOTA: El servidor actual no soporta filtros, pero los agregamos aquí
+    // para reducir el procesamiento del cliente con caché de React Query
+    const url = new URL(`${API_BASE_URL}/workouts`);
+    if (params?.startDate) url.searchParams.append('startDate', params.startDate);
+    if (params?.endDate) url.searchParams.append('endDate', params.endDate);
+    if (params?.limit) url.searchParams.append('limit', params.limit.toString());
+
+    const response = await fetch(url.toString(), { headers });
     if (!response.ok) {
       const error = await response.json();
       throw new Error(`Failed to fetch workouts: ${error.error || response.statusText}`);
     }
     const data = await response.json();
-    console.log('✅ Workouts fetched from server:', data.workouts);
+    console.log('✅ Workouts fetched from server:', data.workouts?.length || 0);
     return data.workouts;
   } catch (error) {
     console.error('❌ Error fetching workouts:', error);

@@ -23,7 +23,6 @@ import { AttendanceTracker } from "./components/AttendanceTracker";
 import { TeamRecordsBoard } from "./components/TeamRecordsBoard";
 import { StatsAnalyticsDashboard } from "./components/StatsAnalyticsDashboard";
 import { MesocicloDialog } from "./components/MesocicloDialog";
-import { TrainingStats } from "./components/TrainingStats";
 import { CompetitionManager } from "./components/CompetitionManager";
 import { SwimmersStats } from "./components/SwimmersStats";
 import { AttendanceManager } from "./components/AttendanceManager";
@@ -35,7 +34,6 @@ import { UserMenu } from "./components/UserMenu";
 import { UnifiedCalendarManager } from "./components/UnifiedCalendarManager";
 import { HolidayManager } from "./components/HolidayManager";
 import { TrashManager } from "./components/TrashManager";
-import { AdvancedDuplicateCleaner } from "./components/AdvancedDuplicateCleaner";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { TestControlManager } from "./components/TestControlManager";
 import { UserManager } from "./components/UserManager";
@@ -495,6 +493,65 @@ function MainApp() {
       const errorMsg = err instanceof Error ? err.message : "Error desconocido";
       alert(`Error al eliminar entrenamiento: ${errorMsg}`);
       console.error("❌ Error al eliminar entrenamiento:", err);
+    }
+  };
+
+  const handleCleanDuplicateWorkouts = async () => {
+    try {
+      if (!confirm("¿Estás seguro de eliminar entrenamientos duplicados? Solo se mantendrá 1 entrenamiento por día.")) {
+        return;
+      }
+
+      console.log("🧹 Iniciando limpieza de entrenamientos duplicados...");
+      console.log(`📊 Total entrenamientos antes: ${workouts.length}`);
+
+      // Agrupar entrenamientos por fecha
+      const workoutsByDate = new Map<string, Workout[]>();
+
+      workouts.forEach(workout => {
+        const dateKey = workout.date.toLowerCase();
+        if (!workoutsByDate.has(dateKey)) {
+          workoutsByDate.set(dateKey, []);
+        }
+        workoutsByDate.get(dateKey)!.push(workout);
+      });
+
+      // Mantener solo el primer entrenamiento de cada día
+      const workoutsToKeep: Workout[] = [];
+      const workoutsToDelete: string[] = [];
+
+      workoutsByDate.forEach((dayWorkouts, date) => {
+        if (dayWorkouts.length > 0) {
+          // Mantener el primero (o el de mayor semana)
+          const sortedWorkouts = [...dayWorkouts].sort((a, b) => b.week - a.week);
+          workoutsToKeep.push(sortedWorkouts[0]);
+
+          // Marcar el resto para eliminar
+          for (let i = 1; i < sortedWorkouts.length; i++) {
+            if (sortedWorkouts[i].id) {
+              workoutsToDelete.push(sortedWorkouts[i].id);
+            }
+          }
+        }
+      });
+
+      console.log(`🗑️ Entrenamientos a eliminar: ${workoutsToDelete.length}`);
+      console.log(`✅ Entrenamientos a mantener: ${workoutsToKeep.length}`);
+
+      // Eliminar los duplicados
+      for (const id of workoutsToDelete) {
+        await api.deleteWorkout(id);
+      }
+
+      // Actualizar el estado
+      setWorkouts(workoutsToKeep);
+
+      alert(`✅ Limpieza completada:\n- Eliminados: ${workoutsToDelete.length}\n- Mantenidos: ${workoutsToKeep.length}`);
+      console.log("✅ Limpieza de duplicados completada");
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Error desconocido";
+      alert(`Error al limpiar duplicados: ${errorMsg}`);
+      console.error("❌ Error al limpiar duplicados:", err);
     }
   };
 
@@ -1076,10 +1133,8 @@ function MainApp() {
                   onEditChallenge={handleEditChallenge}
                   onDeleteChallenge={handleDeleteChallenge}
                   onSyncFromLocal={handleSyncFromLocal}
+                  onCleanDuplicates={handleCleanDuplicateWorkouts}
                 />
-
-                {/* Limpiador Avanzado de Duplicados */}
-                <AdvancedDuplicateCleaner />
 
                 {/* Gestión de Días Feriados */}
                 <HolidayManager
@@ -1093,12 +1148,6 @@ function MainApp() {
                 <TrashManager />
               </div>
             )}
-
-            {/* Estadísticas de Entrenamiento */}
-            <div>
-              <h2 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4">Estadísticas de Entrenamiento</h2>
-              <TrainingStats sessions={allSessions} />
-            </div>
           </TabsContent>
 
           {/* SECCIÓN 1.5: CALENDARIO INTEGRADO */}

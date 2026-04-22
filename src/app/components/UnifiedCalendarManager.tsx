@@ -24,6 +24,7 @@ interface UnifiedCalendarManagerProps {
   onDeleteChallenge: (id: string) => void;
   onSyncFromLocal?: () => void;
   onForceSyncFromLocal?: () => void;
+  onCleanDuplicates?: () => void;
 }
 
 interface CalendarDay {
@@ -45,17 +46,18 @@ const MONTHS = [
 const DAYS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 const DAY_NAMES_FULL = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
-export function UnifiedCalendarManager({ 
-  workouts, 
+export function UnifiedCalendarManager({
+  workouts,
   challenges,
-  onAddWorkout, 
-  onEditWorkout, 
+  onAddWorkout,
+  onEditWorkout,
   onDeleteWorkout,
   onAddChallenge,
   onEditChallenge,
   onDeleteChallenge,
   onSyncFromLocal,
-  onForceSyncFromLocal
+  onForceSyncFromLocal,
+  onCleanDuplicates
 }: UnifiedCalendarManagerProps) {
   const { user } = useAuth();
   const isAdmin = user?.role === "admin" || user?.role === "coach";
@@ -72,8 +74,6 @@ export function UnifiedCalendarManager({
   // Estados para entrenamientos
   const [multiDayMode, setMultiDayMode] = useState(false);
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
-  const [multiScheduleMode, setMultiScheduleMode] = useState(false);
-  const [selectedSchedules, setSelectedSchedules] = useState<("AM" | "PM")[]>([]);
   const [workoutFormData, setWorkoutFormData] = useState<Omit<Workout, "id">>({
     week: 1,
     date: "",
@@ -87,6 +87,52 @@ export function UnifiedCalendarManager({
     cooldown: "",
     intensity: "Media",
   });
+
+  // Función auxiliar para calcular distancia de un texto
+  const calculateDistanceFromText = (text: string): number => {
+    let total = 0;
+    const patterns = [
+      /(\d+)\s*x\s*(\d+)\s*m/gi,  // 4x100m, 4 x 100m
+      /(\d+)\s*m/gi,               // 300m, 200m
+    ];
+
+    patterns.forEach(pattern => {
+      const matches = text.matchAll(pattern);
+      for (const match of matches) {
+        if (match[2]) {
+          // Formato NxDm (ej: 4x100m)
+          const reps = parseInt(match[1]);
+          const distance = parseInt(match[2]);
+          total += reps * distance;
+        } else if (match[1]) {
+          // Formato Dm (ej: 300m)
+          total += parseInt(match[1]);
+        }
+      }
+    });
+
+    return total;
+  };
+
+  // Calcular distancias por sección
+  const warmupDistance = useMemo(() => {
+    return calculateDistanceFromText(workoutFormData.warmup);
+  }, [workoutFormData.warmup]);
+
+  const mainSetDistance = useMemo(() => {
+    return workoutFormData.mainSet.reduce((total, text) => {
+      return total + calculateDistanceFromText(text);
+    }, 0);
+  }, [workoutFormData.mainSet]);
+
+  const cooldownDistance = useMemo(() => {
+    return calculateDistanceFromText(workoutFormData.cooldown);
+  }, [workoutFormData.cooldown]);
+
+  // Calcular distancia total
+  const calculatedDistance = useMemo(() => {
+    return warmupDistance + mainSetDistance + cooldownDistance;
+  }, [warmupDistance, mainSetDistance, cooldownDistance]);
 
   // Estados para desafíos
   const [challengeFormData, setChallengeFormData] = useState<Omit<Challenge, "id">>({
@@ -104,7 +150,6 @@ export function UnifiedCalendarManager({
   });
 
   const availableDays = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
-  const availableSchedules: ("AM" | "PM")[] = ["AM", "PM"];
 
   // Helper para parsear fechas en formato "3 de febrero"
   const parseWorkoutDate = (dateText: string, viewingYear: number): Date | null => {
@@ -278,14 +323,6 @@ export function UnifiedCalendarManager({
     );
   };
 
-  const toggleScheduleSelection = (schedule: "AM" | "PM") => {
-    setSelectedSchedules(prev => 
-      prev.includes(schedule) 
-        ? prev.filter(s => s !== schedule)
-        : [...prev, schedule]
-    );
-  };
-
   // Función para obtener el bloque de entrenamiento según la semana
   const getBlockForWeek = (week: number) => {
     return trainingBlocks.find(block => block.weekNumbers.includes(week));
@@ -394,19 +431,23 @@ export function UnifiedCalendarManager({
 
   const handleSubmit = () => {
     if (eventType === "workout") {
+      // Usar distancia calculada automáticamente
+      const workoutData = {
+        ...workoutFormData,
+        distance: calculatedDistance,
+        duration: 60, // Duración por defecto
+        schedule: "AM" // Valor por defecto, ya no es relevante
+      };
+
       if (editingWorkout && editingWorkout.id) {
-        onEditWorkout(editingWorkout.id, workoutFormData);
+        onEditWorkout(editingWorkout.id, workoutData);
       } else {
         const daysToUse = multiDayMode && selectedDays.length > 0 ? selectedDays : [workoutFormData.day];
-        const schedulesToUse = multiScheduleMode && selectedSchedules.length > 0 ? selectedSchedules : [workoutFormData.schedule || "AM"];
-        
+
         daysToUse.forEach(day => {
-          schedulesToUse.forEach(schedule => {
-            onAddWorkout({
-              ...workoutFormData,
-              day: day,
-              schedule: schedule
-            });
+          onAddWorkout({
+            ...workoutData,
+            day: day
           });
         });
       }
@@ -417,7 +458,7 @@ export function UnifiedCalendarManager({
         onAddChallenge(challengeFormData);
       }
     }
-    
+
     setDialogOpen(false);
     resetForm();
   };
@@ -453,8 +494,6 @@ export function UnifiedCalendarManager({
     setEditingChallenge(null);
     setMultiDayMode(false);
     setSelectedDays([]);
-    setMultiScheduleMode(false);
-    setSelectedSchedules([]);
     setSelectedDay(null);
   };
 
@@ -533,6 +572,17 @@ export function UnifiedCalendarManager({
             <CardTitle>Gestionar Calendario</CardTitle>
           </div>
           <div className="flex gap-2">
+            {onCleanDuplicates && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onCleanDuplicates}
+                className="text-red-600 border-red-600 hover:bg-red-50"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Limpiar Duplicados (1 por día)
+              </Button>
+            )}
             {onSyncFromLocal && (
               <Button
                 size="sm"
@@ -550,39 +600,45 @@ export function UnifiedCalendarManager({
 
       <CardContent>
         {/* Navegación del calendario */}
-        <div className="flex items-center justify-between mb-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={previousMonth}
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <h3 className="text-lg font-semibold">
-            {MONTHS[currentMonth]} {currentYear}
-          </h3>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={nextMonth}
-          >
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
-
-        {/* Info */}
-        <div className="text-sm text-gray-600 mb-4 text-center space-y-1">
-          <div>
-            <span className="font-semibold text-blue-600">{workouts.length}</span> entrenamientos • {" "}
-            <span className="font-semibold text-orange-600">{challenges.length}</span> desafíos
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={previousMonth}
+              className="hover:bg-blue-50 hover:border-blue-300"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </Button>
+            <div className="text-center">
+              <h3 className="text-xl font-bold text-gray-900">
+                {MONTHS[currentMonth]} {currentYear}
+              </h3>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={nextMonth}
+              className="hover:bg-blue-50 hover:border-blue-300"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
           </div>
-          <div className="text-xs flex items-center justify-center gap-4">
-            <span className="flex items-center gap-1">
-              <Waves className="w-3 h-3 text-blue-600" /> Entrenamiento
-            </span>
-            <span className="flex items-center gap-1">
-              <Trophy className="w-3 h-3 text-orange-600" /> Desafío
-            </span>
+
+          {/* Info */}
+          <div className="flex items-center justify-center gap-3 bg-gradient-to-r from-blue-50 via-purple-50 to-orange-50 rounded-lg p-3 border border-gray-200">
+            <div className="flex items-center gap-2 bg-white rounded-md px-3 py-1.5 shadow-sm">
+              <Waves className="w-4 h-4 text-blue-600" />
+              <span className="text-sm font-semibold text-gray-700">
+                <span className="text-blue-600">{workouts.length}</span> Entrenamientos
+              </span>
+            </div>
+            <div className="flex items-center gap-2 bg-white rounded-md px-3 py-1.5 shadow-sm">
+              <Trophy className="w-4 h-4 text-orange-600" />
+              <span className="text-sm font-semibold text-gray-700">
+                <span className="text-orange-600">{challenges.length}</span> Desafíos
+              </span>
+            </div>
           </div>
         </div>
 
@@ -591,7 +647,7 @@ export function UnifiedCalendarManager({
           {DAYS.map((day) => (
             <div
               key={day}
-              className="text-center text-xs font-semibold text-gray-600 py-1"
+              className="text-center text-xs font-bold text-gray-700 py-2 bg-gradient-to-b from-gray-100 to-gray-50 rounded-md border border-gray-200"
             >
               {day}
             </div>
@@ -608,19 +664,19 @@ export function UnifiedCalendarManager({
               <div
                 key={index}
                 className={`
-                  min-h-[80px] p-1 rounded-lg border transition-all text-left relative
-                  ${day.isCurrentMonth ? "bg-white" : "bg-gray-50 opacity-40"}
-                  ${day.isToday ? "border-2 border-blue-500 ring-2 ring-blue-200" : "border-gray-200"}
-                  ${hasEvents ? "border-blue-300" : ""}
+                  group/day min-h-[110px] p-1.5 rounded-lg border transition-all text-left relative
+                  ${day.isCurrentMonth ? "bg-white hover:bg-gray-50/50" : "bg-gray-50 opacity-40"}
+                  ${day.isToday ? "border-2 border-blue-500 ring-2 ring-blue-200 shadow-md" : "border-gray-200"}
+                  ${hasEvents ? "border-blue-300 bg-blue-50/30" : "hover:border-gray-300"}
                 `}
               >
                 <div className="flex flex-col h-full">
                   {/* Número del día */}
-                  <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center justify-between mb-1.5">
                     <span
-                      className={`text-xs font-semibold ${
+                      className={`text-sm font-bold ${
                         day.isToday
-                          ? "text-blue-600"
+                          ? "text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full"
                           : day.isCurrentMonth
                           ? "text-gray-900"
                           : "text-gray-400"
@@ -629,89 +685,117 @@ export function UnifiedCalendarManager({
                       {day.date.getDate()}
                     </span>
                     {hasEvents && (
-                      <span className="text-xs bg-blue-500 text-white rounded-full w-4 h-4 flex items-center justify-center">
+                      <span className="text-[10px] font-bold bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center shadow-sm">
                         {totalEvents}
                       </span>
                     )}
                   </div>
 
                   {/* Lista de eventos */}
-                  <div className="flex flex-col gap-0.5 flex-1">
+                  <div className="flex flex-col gap-1 flex-1">
                     {/* Entrenamientos */}
-                    {day.workouts.slice(0, 1).map((workout) => {
+                    {day.workouts.slice(0, 2).map((workout) => {
                       const block = getBlockForWeek(workout.week);
                       const colors = block ? getBlockColors(block.color) : { bg: 'bg-blue-100', border: 'border-blue-300', text: 'text-blue-700' };
-                      
+
+                      // Tooltip detallado
+                      const tooltipText = `Semana ${workout.week}\n${workout.mesociclo} • ${workout.distance}m • ${workout.duration}min`;
+
                       return (
                         <div
                           key={workout.id}
                           onClick={(e) => handleWorkoutClick(workout, e)}
-                          className={`group relative flex items-center gap-1 ${colors.bg} hover:bg-opacity-80 border ${colors.border} rounded px-1 py-0.5 transition-colors cursor-pointer`}
+                          className={`group relative ${colors.bg} hover:opacity-90 border ${colors.border} rounded-md px-1.5 py-1 transition-all cursor-pointer shadow-sm hover:shadow`}
+                          title={tooltipText}
                         >
-                          <Waves className="w-2 h-2 flex-shrink-0" style={{ color: block ? `var(--color-${block.color}-600)` : '#2563eb' }} />
-                          <div className="flex-1 min-w-0 flex items-center gap-1">
-                            <span className={`text-[10px] font-bold ${colors.text} px-1 py-0 rounded`}>
-                              S{workout.week}
+                          <div className="flex items-start justify-between gap-1 mb-0.5">
+                            <span className={`text-[10px] font-bold ${colors.text} leading-none`}>
+                              Semana {workout.week}
                             </span>
-                            <span className="text-xs">
-                              {workout.schedule === "AM" ? "🌅" : "🌆"}
+                            <button
+                              onClick={(e) => workout.id && handleDeleteWorkout(workout.id, e)}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <Trash2 className="w-3 h-3 text-red-600" />
+                            </button>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-1">
+                            <div className="flex items-center gap-1">
+                              <Waves className="w-3 h-3" style={{ color: block ? `var(--color-${block.color}-600)` : '#2563eb' }} />
+                              <span className={`text-[10px] font-semibold ${colors.text}`}>
+                                {workout.distance}m
+                              </span>
+                            </div>
+                            <span className={`text-[9px] font-medium ${colors.text} uppercase`}>
+                              {workout.mesociclo.slice(0, 4)}
                             </span>
                           </div>
-                          <button
-                            onClick={(e) => workout.id && handleDeleteWorkout(workout.id, e)}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <Trash2 className="w-3 h-3 text-red-600" />
-                          </button>
                         </div>
                       );
                     })}
 
                     {/* Desafíos */}
-                    {day.challenges.slice(0, 1).map((challenge) => (
-                      <div
-                        key={challenge.id}
-                        onClick={(e) => handleChallengeClick(challenge, e)}
-                        className="group relative flex items-center gap-1 bg-orange-100 hover:bg-orange-200 border border-orange-300 rounded px-1 py-0.5 transition-colors cursor-pointer"
-                      >
-                        <Trophy className="w-2 h-2 text-orange-600 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-xs text-orange-900 font-medium truncate">
-                            🏆 S{challenge.week}
-                          </p>
-                        </div>
-                        <button
-                          onClick={(e) => challenge.id && handleDeleteChallenge(challenge.id, e)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <Trash2 className="w-3 h-3 text-red-600" />
-                        </button>
-                      </div>
-                    ))}
+                    {day.challenges.slice(0, 1).map((challenge) => {
+                      // Tooltip detallado para desafíos
+                      const tooltipText = `Desafío • Semana ${challenge.week}\n${challenge.challengeName}\n${challenge.distance}m • ${challenge.duration}min`;
 
-                    {totalEvents > 2 && (
-                      <div className="text-xs text-gray-500 text-center">
-                        +{totalEvents - 2} más
+                      return (
+                        <div
+                          key={challenge.id}
+                          onClick={(e) => handleChallengeClick(challenge, e)}
+                          className="group relative bg-gradient-to-r from-orange-100 to-amber-100 hover:opacity-90 border border-orange-300 rounded-md px-1.5 py-1 transition-all cursor-pointer shadow-sm hover:shadow"
+                          title={tooltipText}
+                        >
+                          <div className="flex items-start justify-between gap-1 mb-0.5">
+                            <div className="flex items-center gap-1">
+                              <Trophy className="w-3 h-3 text-orange-600 flex-shrink-0" />
+                              <span className="text-[10px] font-bold text-orange-900 leading-none">
+                                Semana {challenge.week}
+                              </span>
+                            </div>
+                            <button
+                              onClick={(e) => challenge.id && handleDeleteChallenge(challenge.id, e)}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <Trash2 className="w-3 h-3 text-red-600" />
+                            </button>
+                          </div>
+
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] font-semibold text-orange-900 truncate flex-1">
+                              🏆 {challenge.challengeName}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {totalEvents > 3 && (
+                      <div className="text-[10px] text-gray-600 font-medium text-center py-0.5 bg-gray-100 rounded border border-gray-300">
+                        +{totalEvents - 3} más
                       </div>
                     )}
                   </div>
 
                   {/* Botones para agregar */}
-                  {day.isCurrentMonth && (
-                    <div className="flex gap-0.5 mt-1 opacity-0 hover:opacity-100 transition-opacity">
+                  {day.isCurrentMonth && isAdmin && (
+                    <div className="flex gap-1 mt-auto pt-1 opacity-0 group-hover/day:opacity-100 transition-opacity">
                       <button
                         onClick={() => handleDayClick(day, "workout")}
-                        className="flex-1 bg-blue-500 hover:bg-blue-600 text-white rounded p-0.5 transition-colors"
+                        className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-md p-1 transition-all shadow-sm hover:shadow text-[10px] font-medium flex items-center justify-center gap-1"
                         title="Agregar entrenamiento"
                       >
-                        <Waves className="w-3 h-3 mx-auto" />
+                        <Waves className="w-3 h-3" />
+                        <span className="hidden sm:inline">+</span>
                       </button>
                       <button
                         onClick={() => handleDayClick(day, "challenge")}
-                        className="flex-1 bg-orange-500 hover:bg-orange-600 text-white rounded p-0.5 transition-colors"
+                        className="flex-1 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-md p-1 transition-all shadow-sm hover:shadow text-[10px] font-medium flex items-center justify-center gap-1"
                         title="Agregar desafío"
                       >
-                        <Trophy className="w-3 h-3 mx-auto" />
+                        <Trophy className="w-3 h-3" />
+                        <span className="hidden sm:inline">+</span>
                       </button>
                     </div>
                   )}
@@ -723,7 +807,7 @@ export function UnifiedCalendarManager({
 
         {/* Leyenda de Bloques de Periodización */}
         <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-          <h4 className="text-xs font-semibold text-gray-700 mb-2">Periodización (7 Bloques - 44 Semanas)</h4>
+          <h4 className="text-xs font-semibold text-gray-700 mb-2">🗓️ Periodización (7 Bloques - 44 Semanas)</h4>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
             {trainingBlocks.map((block) => {
               const colors = getBlockColors(block.color);
@@ -795,36 +879,22 @@ export function UnifiedCalendarManager({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Día</Label>
-                    <Select value={workoutFormData.day} onValueChange={(value) => setWorkoutFormData({ ...workoutFormData, day: value })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Lunes">Lunes</SelectItem>
-                        <SelectItem value="Martes">Martes</SelectItem>
-                        <SelectItem value="Miércoles">Miércoles</SelectItem>
-                        <SelectItem value="Jueves">Jueves</SelectItem>
-                        <SelectItem value="Viernes">Viernes</SelectItem>
-                        <SelectItem value="Sábado">Sábado</SelectItem>
-                        <SelectItem value="Domingo">Domingo</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Horario</Label>
-                    <Select value={workoutFormData.schedule} onValueChange={(value) => setWorkoutFormData({ ...workoutFormData, schedule: value as "AM" | "PM" })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="AM">🌅 Mañana (AM)</SelectItem>
-                        <SelectItem value="PM">🌆 Tarde (PM)</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div className="space-y-2">
+                  <Label>Día de la Semana</Label>
+                  <Select value={workoutFormData.day} onValueChange={(value) => setWorkoutFormData({ ...workoutFormData, day: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Lunes">Lunes</SelectItem>
+                      <SelectItem value="Martes">Martes</SelectItem>
+                      <SelectItem value="Miércoles">Miércoles</SelectItem>
+                      <SelectItem value="Jueves">Jueves</SelectItem>
+                      <SelectItem value="Viernes">Viernes</SelectItem>
+                      <SelectItem value="Sábado">Sábado</SelectItem>
+                      <SelectItem value="Domingo">Domingo</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-2">
@@ -854,40 +924,53 @@ export function UnifiedCalendarManager({
                   </p>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>Distancia (m)</Label>
-                    <Input
-                      type="number"
-                      min="1000"
-                      step="100"
-                      value={workoutFormData.distance}
-                      onChange={(e) => setWorkoutFormData({ ...workoutFormData, distance: parseInt(e.target.value) })}
-                    />
+                <div className="space-y-2">
+                  <Label>Intensidad</Label>
+                  <Select value={workoutFormData.intensity} onValueChange={(value) => setWorkoutFormData({ ...workoutFormData, intensity: value })}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Baja">Baja</SelectItem>
+                      <SelectItem value="Media">Media</SelectItem>
+                      <SelectItem value="Alta">Alta</SelectItem>
+                      <SelectItem value="Muy alta">Muy Alta</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Distancia calculada automáticamente */}
+                <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border-2 border-blue-300 shadow-sm">
+                  <h4 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                    <span className="text-lg">🧮</span>
+                    Distancia Total - Cálculo Automático
+                  </h4>
+
+                  {/* Desglose por sección */}
+                  <div className="space-y-2 mb-3">
+                    <div className="bg-white rounded-md p-3 border border-gray-300 flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-700">Calentamiento</span>
+                      <span className="text-lg font-bold text-orange-600">{warmupDistance}m</span>
+                    </div>
+                    <div className="bg-white rounded-md p-3 border border-gray-300 flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-700">Serie Principal</span>
+                      <span className="text-lg font-bold text-purple-600">{mainSetDistance}m</span>
+                    </div>
+                    <div className="bg-white rounded-md p-3 border border-gray-300 flex justify-between items-center">
+                      <span className="text-sm font-medium text-gray-700">Enfriamiento</span>
+                      <span className="text-lg font-bold text-cyan-600">{cooldownDistance}m</span>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Duración (min)</Label>
-                    <Input
-                      type="number"
-                      min="30"
-                      step="5"
-                      value={workoutFormData.duration}
-                      onChange={(e) => setWorkoutFormData({ ...workoutFormData, duration: parseInt(e.target.value) })}
-                    />
+
+                  {/* Total */}
+                  <div className="bg-white rounded-md p-4 border-2 border-blue-400 shadow-md">
+                    <Label className="text-sm text-gray-600 mb-2 block">Distancia Total</Label>
+                    <div className="text-4xl font-bold text-blue-600">
+                      {calculatedDistance}m
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Intensidad</Label>
-                    <Select value={workoutFormData.intensity} onValueChange={(value) => setWorkoutFormData({ ...workoutFormData, intensity: value })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Baja">Baja</SelectItem>
-                        <SelectItem value="Media">Media</SelectItem>
-                        <SelectItem value="Alta">Alta</SelectItem>
-                        <SelectItem value="Muy alta">Muy alta</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="mt-3 text-xs text-gray-600 bg-white p-2 rounded border border-gray-200">
+                    <strong>💡 Tip:</strong> Escribe las distancias en formato "300m", "4x100m", "8 x 50m" para cálculo automático
                   </div>
                 </div>
 
@@ -982,58 +1065,6 @@ export function UnifiedCalendarManager({
                           {selectedDays.length > 0 
                             ? `Se crearán ${selectedDays.length} entrenamiento(s): ${selectedDays.join(', ')}`
                             : 'Selecciona al menos un día'}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Modo Multi-Horario */}
-                {!editingWorkout && (
-                  <div className="border-t pt-4 mt-4">
-                    <div className="flex items-center space-x-2 mb-3">
-                      <Checkbox
-                        id="multi-schedule-mode"
-                        checked={multiScheduleMode}
-                        onCheckedChange={(checked) => {
-                          setMultiScheduleMode(checked as boolean);
-                          if (checked) {
-                            setSelectedSchedules([workoutFormData.schedule || "AM"]);
-                          }
-                        }}
-                      />
-                      <Label 
-                        htmlFor="multi-schedule-mode" 
-                        className="flex items-center gap-2 cursor-pointer"
-                      >
-                        <CalendarIcon className="w-4 h-4 text-blue-600" />
-                        <span className="font-semibold">Crear para múltiples horarios</span>
-                      </Label>
-                    </div>
-                    
-                    {multiScheduleMode && (
-                      <div className="space-y-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                        <p className="text-sm text-gray-700 mb-2">
-                          Selecciona los horarios para los cuales crear este entrenamiento:
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {availableSchedules.map(schedule => (
-                            <Button
-                              key={schedule}
-                              type="button"
-                              size="sm"
-                              variant={selectedSchedules.includes(schedule) ? "default" : "outline"}
-                              onClick={() => toggleScheduleSelection(schedule)}
-                              className={selectedSchedules.includes(schedule) ? 'bg-blue-600 hover:bg-blue-700' : ''}
-                            >
-                              {schedule}
-                            </Button>
-                          ))}
-                        </div>
-                        <p className="text-xs text-gray-600 mt-2">
-                          {selectedSchedules.length > 0 
-                            ? `Se crearán ${selectedSchedules.length} entrenamiento(s): ${selectedSchedules.join(', ')}`
-                            : 'Selecciona al menos un horario'}
                         </p>
                       </div>
                     )}

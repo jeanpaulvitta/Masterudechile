@@ -7,7 +7,7 @@ import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Checkbox } from "./ui/checkbox";
 import { Textarea } from "./ui/textarea";
-import { Plus, Edit, Trash2, Dumbbell, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Waves, Trophy, RefreshCw } from "lucide-react";
+import { Plus, Edit, Trash2, Dumbbell, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Waves, Trophy } from "lucide-react";
 import type { Workout } from "../data/workouts";
 import type { Challenge } from "../data/challenges";
 import { useAuth } from "../contexts/AuthContext";
@@ -22,8 +22,6 @@ interface UnifiedCalendarManagerProps {
   onAddChallenge: (challenge: Omit<Challenge, "id">) => void;
   onEditChallenge: (id: string, challenge: Omit<Challenge, "id">) => void;
   onDeleteChallenge: (id: string) => void;
-  onSyncFromLocal?: () => void;
-  onForceSyncFromLocal?: () => void;
   onCleanDuplicates?: () => void;
 }
 
@@ -55,8 +53,6 @@ export function UnifiedCalendarManager({
   onAddChallenge,
   onEditChallenge,
   onDeleteChallenge,
-  onSyncFromLocal,
-  onForceSyncFromLocal,
   onCleanDuplicates
 }: UnifiedCalendarManagerProps) {
   const { user } = useAuth();
@@ -565,53 +561,43 @@ export function UnifiedCalendarManager({
 
   return (
     <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <CalendarIcon className="w-5 h-5 text-blue-600" />
-            <CardTitle>Gestionar Calendario</CardTitle>
+      <CardHeader className="px-2 sm:px-6 py-2 sm:py-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+            <CardTitle className="text-base sm:text-xl">Gestionar Calendario</CardTitle>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 w-full sm:w-auto">
             {onCleanDuplicates && (
               <Button
                 size="sm"
                 variant="outline"
                 onClick={onCleanDuplicates}
-                className="text-red-600 border-red-600 hover:bg-red-50"
+                className="text-red-600 border-red-600 hover:bg-red-50 text-xs sm:text-sm px-2 sm:px-4 h-7 sm:h-9"
               >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Limpiar Duplicados (1 por día)
-              </Button>
-            )}
-            {onSyncFromLocal && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={onSyncFromLocal}
-                className="text-green-600 border-green-600 hover:bg-green-50"
-              >
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Sincronizar Todo
+                <Trash2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Limpiar Duplicados (1 por día)</span>
+                <span className="sm:hidden">Limpiar</span>
               </Button>
             )}
           </div>
         </div>
       </CardHeader>
 
-      <CardContent>
+      <CardContent className="px-1.5 sm:px-6 py-2 sm:py-4">
         {/* Navegación del calendario */}
-        <div className="mb-4">
-          <div className="flex items-center justify-between mb-3">
+        <div className="mb-2 sm:mb-4">
+          <div className="flex items-center justify-between mb-1.5 sm:mb-3">
             <Button
               variant="outline"
               size="sm"
               onClick={previousMonth}
-              className="hover:bg-blue-50 hover:border-blue-300"
+              className="hover:bg-blue-50 hover:border-blue-300 h-7 sm:h-9 px-1.5 sm:px-3"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4" />
             </Button>
             <div className="text-center">
-              <h3 className="text-xl font-bold text-gray-900">
+              <h3 className="text-sm sm:text-xl font-bold text-gray-900">
                 {MONTHS[currentMonth]} {currentYear}
               </h3>
             </div>
@@ -619,35 +605,37 @@ export function UnifiedCalendarManager({
               variant="outline"
               size="sm"
               onClick={nextMonth}
-              className="hover:bg-blue-50 hover:border-blue-300"
+              className="hover:bg-blue-50 hover:border-blue-300 h-7 sm:h-9 px-1.5 sm:px-3"
             >
-              <ChevronRight className="w-4 h-4" />
+              <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4" />
             </Button>
           </div>
 
           {/* Info */}
-          <div className="flex items-center justify-center gap-3 bg-gradient-to-r from-blue-50 via-purple-50 to-orange-50 rounded-lg p-3 border border-gray-200">
-            <div className="flex items-center gap-2 bg-white rounded-md px-3 py-1.5 shadow-sm">
-              <Waves className="w-4 h-4 text-blue-600" />
-              <span className="text-sm font-semibold text-gray-700">
-                <span className="text-blue-600">{workouts.length}</span> Entrenamientos
+          <div className="flex items-center justify-center gap-2 sm:gap-3 bg-gradient-to-r from-blue-50 via-purple-50 to-orange-50 rounded-lg p-1.5 sm:p-3 border border-gray-200">
+            <div className="flex items-center gap-1 sm:gap-2 bg-white rounded-md px-1.5 sm:px-3 py-0.5 sm:py-1.5 shadow-sm">
+              <Waves className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 flex-shrink-0" />
+              <span className="text-[10px] sm:text-sm font-semibold text-gray-700">
+                <span className="text-blue-600">{workouts.length}</span>
+                <span className="hidden sm:inline ml-1">Entrenamientos</span>
               </span>
             </div>
-            <div className="flex items-center gap-2 bg-white rounded-md px-3 py-1.5 shadow-sm">
-              <Trophy className="w-4 h-4 text-orange-600" />
-              <span className="text-sm font-semibold text-gray-700">
-                <span className="text-orange-600">{challenges.length}</span> Desafíos
+            <div className="flex items-center gap-1 sm:gap-2 bg-white rounded-md px-1.5 sm:px-3 py-0.5 sm:py-1.5 shadow-sm">
+              <Trophy className="w-3 h-3 sm:w-4 sm:h-4 text-orange-600 flex-shrink-0" />
+              <span className="text-[10px] sm:text-sm font-semibold text-gray-700">
+                <span className="text-orange-600">{challenges.length}</span>
+                <span className="hidden sm:inline ml-1">Desafíos</span>
               </span>
             </div>
           </div>
         </div>
 
         {/* Días de la semana */}
-        <div className="grid grid-cols-7 gap-1 mb-2">
+        <div className="grid grid-cols-7 gap-[2px] sm:gap-1 mb-0.5 sm:mb-2">
           {DAYS.map((day) => (
             <div
               key={day}
-              className="text-center text-xs font-bold text-gray-700 py-2 bg-gradient-to-b from-gray-100 to-gray-50 rounded-md border border-gray-200"
+              className="text-center text-[8px] sm:text-xs font-bold text-gray-700 py-0.5 sm:py-2 bg-gradient-to-b from-gray-100 to-gray-50 rounded-sm border border-gray-200"
             >
               {day}
             </div>
@@ -655,7 +643,7 @@ export function UnifiedCalendarManager({
         </div>
 
         {/* Días del mes */}
-        <div className="grid grid-cols-7 gap-1">
+        <div className="grid grid-cols-7 gap-[2px] sm:gap-1">
           {calendarDays.map((day, index) => {
             const hasEvents = day.workouts.length > 0 || day.challenges.length > 0;
             const totalEvents = day.workouts.length + day.challenges.length;
@@ -664,19 +652,19 @@ export function UnifiedCalendarManager({
               <div
                 key={index}
                 className={`
-                  group/day min-h-[110px] p-1.5 rounded-lg border transition-all text-left relative
+                  group/day min-h-[65px] sm:min-h-[110px] p-0.5 sm:p-1.5 rounded-sm sm:rounded-lg border transition-all text-left relative
                   ${day.isCurrentMonth ? "bg-white hover:bg-gray-50/50" : "bg-gray-50 opacity-40"}
-                  ${day.isToday ? "border-2 border-blue-500 ring-2 ring-blue-200 shadow-md" : "border-gray-200"}
+                  ${day.isToday ? "border-2 border-blue-500 ring-1 sm:ring-2 ring-blue-200 shadow-md" : "border-gray-200"}
                   ${hasEvents ? "border-blue-300 bg-blue-50/30" : "hover:border-gray-300"}
                 `}
               >
                 <div className="flex flex-col h-full">
                   {/* Número del día */}
-                  <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center justify-between mb-0.5">
                     <span
-                      className={`text-sm font-bold ${
+                      className={`text-[10px] sm:text-sm font-bold ${
                         day.isToday
-                          ? "text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full"
+                          ? "text-blue-600 bg-blue-100 px-1 sm:px-2 py-0.5 rounded-full"
                           : day.isCurrentMonth
                           ? "text-gray-900"
                           : "text-gray-400"
@@ -684,17 +672,17 @@ export function UnifiedCalendarManager({
                     >
                       {day.date.getDate()}
                     </span>
-                    {hasEvents && (
-                      <span className="text-[10px] font-bold bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center shadow-sm">
+                    {hasEvents && totalEvents > 1 && (
+                      <span className="text-[7px] sm:text-[10px] font-bold bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-full w-3.5 h-3.5 sm:w-5 sm:h-5 flex items-center justify-center shadow-sm">
                         {totalEvents}
                       </span>
                     )}
                   </div>
 
                   {/* Lista de eventos */}
-                  <div className="flex flex-col gap-1 flex-1">
-                    {/* Entrenamientos */}
-                    {day.workouts.slice(0, 2).map((workout) => {
+                  <div className="flex flex-col gap-0.5 sm:gap-1 flex-1">
+                    {/* Entrenamientos - mostrar 1 en móvil, 2 en desktop */}
+                    {day.workouts.slice(0, window.innerWidth < 640 ? 1 : 2).map((workout) => {
                       const block = getBlockForWeek(workout.week);
                       const colors = block ? getBlockColors(block.color) : { bg: 'bg-blue-100', border: 'border-blue-300', text: 'text-blue-700' };
 
@@ -705,31 +693,25 @@ export function UnifiedCalendarManager({
                         <div
                           key={workout.id}
                           onClick={(e) => handleWorkoutClick(workout, e)}
-                          className={`group relative ${colors.bg} hover:opacity-90 border ${colors.border} rounded-md px-1.5 py-1 transition-all cursor-pointer shadow-sm hover:shadow`}
+                          className={`group relative ${colors.bg} hover:opacity-90 border ${colors.border} rounded-sm sm:rounded-md px-0.5 sm:px-1.5 py-0.5 sm:py-1 transition-all cursor-pointer shadow-sm hover:shadow`}
                           title={tooltipText}
                         >
-                          <div className="flex items-start justify-between gap-1 mb-0.5">
-                            <span className={`text-[10px] font-bold ${colors.text} leading-none`}>
-                              Semana {workout.week}
-                            </span>
-                            <button
-                              onClick={(e) => workout.id && handleDeleteWorkout(workout.id, e)}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <Trash2 className="w-3 h-3 text-red-600" />
-                            </button>
-                          </div>
-
-                          <div className="flex items-center justify-between gap-1">
-                            <div className="flex items-center gap-1">
-                              <Waves className="w-3 h-3" style={{ color: block ? `var(--color-${block.color}-600)` : '#2563eb' }} />
-                              <span className={`text-[10px] font-semibold ${colors.text}`}>
+                          <div className="flex items-center justify-between gap-0.5">
+                            <div className="flex items-center gap-0.5 sm:gap-1 flex-1 min-w-0">
+                              <span className={`text-[7px] sm:text-[10px] font-bold ${colors.text} leading-none flex-shrink-0`}>
+                                S{workout.week}
+                              </span>
+                              <Waves className="w-2 h-2 sm:w-3 sm:h-3 flex-shrink-0" style={{ color: block ? `var(--color-${block.color}-600)` : '#2563eb' }} />
+                              <span className={`text-[7px] sm:text-[10px] font-semibold ${colors.text} truncate`}>
                                 {workout.distance}m
                               </span>
                             </div>
-                            <span className={`text-[9px] font-medium ${colors.text} uppercase`}>
-                              {workout.mesociclo.slice(0, 4)}
-                            </span>
+                            <button
+                              onClick={(e) => workout.id && handleDeleteWorkout(workout.id, e)}
+                              className="opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0"
+                            >
+                              <Trash2 className="w-2 h-2 sm:w-3 sm:h-3 text-red-600" />
+                            </button>
                           </div>
                         </div>
                       );
@@ -744,58 +726,53 @@ export function UnifiedCalendarManager({
                         <div
                           key={challenge.id}
                           onClick={(e) => handleChallengeClick(challenge, e)}
-                          className="group relative bg-gradient-to-r from-orange-100 to-amber-100 hover:opacity-90 border border-orange-300 rounded-md px-1.5 py-1 transition-all cursor-pointer shadow-sm hover:shadow"
+                          className="group relative bg-gradient-to-r from-orange-100 to-amber-100 hover:opacity-90 border border-orange-300 rounded-sm sm:rounded-md px-0.5 sm:px-1.5 py-0.5 sm:py-1 transition-all cursor-pointer shadow-sm hover:shadow"
                           title={tooltipText}
                         >
-                          <div className="flex items-start justify-between gap-1 mb-0.5">
-                            <div className="flex items-center gap-1">
-                              <Trophy className="w-3 h-3 text-orange-600 flex-shrink-0" />
-                              <span className="text-[10px] font-bold text-orange-900 leading-none">
-                                Semana {challenge.week}
+                          <div className="flex items-center justify-between gap-0.5">
+                            <div className="flex items-center gap-0.5 sm:gap-1 flex-1 min-w-0">
+                              <Trophy className="w-2 h-2 sm:w-3 sm:h-3 text-orange-600 flex-shrink-0" />
+                              <span className="text-[7px] sm:text-[10px] font-bold text-orange-900 leading-none flex-shrink-0">
+                                S{challenge.week}
+                              </span>
+                              <span className="text-[7px] sm:text-[10px] font-semibold text-orange-900 truncate ml-0.5">
+                                {challenge.challengeName}
                               </span>
                             </div>
                             <button
                               onClick={(e) => challenge.id && handleDeleteChallenge(challenge.id, e)}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0"
                             >
-                              <Trash2 className="w-3 h-3 text-red-600" />
+                              <Trash2 className="w-2 h-2 sm:w-3 sm:h-3 text-red-600" />
                             </button>
-                          </div>
-
-                          <div className="flex items-center gap-1">
-                            <span className="text-[10px] font-semibold text-orange-900 truncate flex-1">
-                              🏆 {challenge.challengeName}
-                            </span>
                           </div>
                         </div>
                       );
                     })}
 
-                    {totalEvents > 3 && (
-                      <div className="text-[10px] text-gray-600 font-medium text-center py-0.5 bg-gray-100 rounded border border-gray-300">
-                        +{totalEvents - 3} más
+                    {totalEvents > (window.innerWidth < 640 ? 1 : 3) && (
+                      <div className="text-[7px] sm:text-[10px] text-gray-600 font-medium text-center py-0.5 bg-gray-100 rounded-sm border border-gray-300">
+                        +{totalEvents - (window.innerWidth < 640 ? 1 : 3)}
                       </div>
                     )}
                   </div>
 
-                  {/* Botones para agregar */}
-                  {day.isCurrentMonth && isAdmin && (
-                    <div className="flex gap-1 mt-auto pt-1 opacity-0 group-hover/day:opacity-100 transition-opacity">
+                  {/* Botones para agregar - siempre visible en móvil, hover en desktop */}
+                  {day.isCurrentMonth && isAdmin && !hasEvents && (
+                    <div className="flex gap-0.5 mt-auto pt-0.5 sm:opacity-0 sm:group-hover/day:opacity-100 transition-opacity">
                       <button
                         onClick={() => handleDayClick(day, "workout")}
-                        className="flex-1 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-md p-1 transition-all shadow-sm hover:shadow text-[10px] font-medium flex items-center justify-center gap-1"
+                        className="flex-1 bg-blue-500 hover:bg-blue-600 text-white rounded-sm p-0.5 transition-all text-[8px] font-medium flex items-center justify-center"
                         title="Agregar entrenamiento"
                       >
-                        <Waves className="w-3 h-3" />
-                        <span className="hidden sm:inline">+</span>
+                        <Waves className="w-2.5 h-2.5" />
                       </button>
                       <button
                         onClick={() => handleDayClick(day, "challenge")}
-                        className="flex-1 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white rounded-md p-1 transition-all shadow-sm hover:shadow text-[10px] font-medium flex items-center justify-center gap-1"
+                        className="flex-1 bg-orange-500 hover:bg-orange-600 text-white rounded-sm p-0.5 transition-all text-[8px] font-medium flex items-center justify-center"
                         title="Agregar desafío"
                       >
-                        <Trophy className="w-3 h-3" />
-                        <span className="hidden sm:inline">+</span>
+                        <Trophy className="w-2.5 h-2.5" />
                       </button>
                     </div>
                   )}
@@ -806,25 +783,25 @@ export function UnifiedCalendarManager({
         </div>
 
         {/* Leyenda de Bloques de Periodización */}
-        <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-          <h4 className="text-xs font-semibold text-gray-700 mb-2">🗓️ Periodización (7 Bloques - 44 Semanas)</h4>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
+        <div className="mt-2 sm:mt-4 p-1.5 sm:p-3 bg-gray-50 rounded-lg border border-gray-200">
+          <h4 className="text-[9px] sm:text-xs font-semibold text-gray-700 mb-1 sm:mb-2">🗓️ Periodización (7 Bloques - 44 Semanas)</h4>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-1 sm:gap-2">
             {trainingBlocks.map((block) => {
               const colors = getBlockColors(block.color);
               return (
-                <div key={block.id} className={`${colors.bg} ${colors.border} border rounded p-2`}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className={`text-xs font-bold ${colors.text}`}>
-                      Bloque {block.id}
+                <div key={block.id} className={`${colors.bg} ${colors.border} border rounded p-1 sm:p-2`}>
+                  <div className="flex items-center justify-between mb-0.5 sm:mb-1">
+                    <span className={`text-[9px] sm:text-xs font-bold ${colors.text}`}>
+                      B{block.id}
                     </span>
-                    <span className="text-[10px] text-gray-600">
-                      {block.weeks}sem
+                    <span className="text-[8px] sm:text-[10px] text-gray-600">
+                      {block.weeks}s
                     </span>
                   </div>
-                  <p className="text-[10px] font-medium text-gray-800 mb-1 line-clamp-2">
+                  <p className="text-[8px] sm:text-[10px] font-medium text-gray-800 mb-0.5 sm:mb-1 line-clamp-2">
                     {block.name}
                   </p>
-                  <p className="text-[9px] text-gray-600">
+                  <p className="text-[7px] sm:text-[9px] text-gray-600">
                     S{block.weekNumbers[0]}-{block.weekNumbers[block.weekNumbers.length - 1]}
                   </p>
                 </div>
@@ -838,7 +815,7 @@ export function UnifiedCalendarManager({
           setDialogOpen(open);
           if (!open) resetForm();
         }}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
             <DialogHeader>
               <DialogTitle>
                 {eventType === "workout" 
@@ -854,33 +831,35 @@ export function UnifiedCalendarManager({
 
             {eventType === "workout" ? (
               // Formulario de Entrenamiento
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-3 sm:gap-4 py-2 sm:py-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="space-y-2">
-                    <Label>Semana</Label>
+                    <Label className="text-sm">Semana</Label>
                     <Input
                       type="number"
                       min="-10"
                       max="20"
                       value={workoutFormData.week}
                       onChange={(e) => setWorkoutFormData({ ...workoutFormData, week: parseInt(e.target.value) })}
+                      className="text-sm"
                     />
-                    <p className="text-xs text-gray-500">
+                    <p className="text-[10px] sm:text-xs text-gray-500">
                       Semanas negativas son para mantenimiento pre-temporada
                     </p>
                   </div>
                   <div className="space-y-2">
-                    <Label>Fecha</Label>
+                    <Label className="text-sm">Fecha</Label>
                     <Input
                       placeholder="Ej: 2 de marzo"
                       value={workoutFormData.date}
                       onChange={(e) => setWorkoutFormData({ ...workoutFormData, date: e.target.value })}
+                      className="text-sm"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Día de la Semana</Label>
+                  <Label className="text-sm">Día de la Semana</Label>
                   <Select value={workoutFormData.day} onValueChange={(value) => setWorkoutFormData({ ...workoutFormData, day: value })}>
                     <SelectTrigger>
                       <SelectValue />
@@ -898,7 +877,7 @@ export function UnifiedCalendarManager({
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Bloque de Periodización</Label>
+                  <Label className="text-sm">Bloque de Periodización</Label>
                   <Select value={workoutFormData.mesociclo} onValueChange={(value) => setWorkoutFormData({ ...workoutFormData, mesociclo: value })}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecciona un bloque" />
@@ -925,7 +904,7 @@ export function UnifiedCalendarManager({
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Intensidad</Label>
+                  <Label className="text-sm">Intensidad</Label>
                   <Select value={workoutFormData.intensity} onValueChange={(value) => setWorkoutFormData({ ...workoutFormData, intensity: value })}>
                     <SelectTrigger>
                       <SelectValue />
@@ -940,57 +919,59 @@ export function UnifiedCalendarManager({
                 </div>
 
                 {/* Distancia calculada automáticamente */}
-                <div className="p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border-2 border-blue-300 shadow-sm">
-                  <h4 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
-                    <span className="text-lg">🧮</span>
+                <div className="p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border-2 border-blue-300 shadow-sm">
+                  <h4 className="text-xs sm:text-sm font-bold text-gray-700 mb-2 sm:mb-3 flex items-center gap-1.5 sm:gap-2">
+                    <span className="text-base sm:text-lg">🧮</span>
                     Distancia Total - Cálculo Automático
                   </h4>
 
                   {/* Desglose por sección */}
-                  <div className="space-y-2 mb-3">
-                    <div className="bg-white rounded-md p-3 border border-gray-300 flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-700">Calentamiento</span>
-                      <span className="text-lg font-bold text-orange-600">{warmupDistance}m</span>
+                  <div className="space-y-1.5 sm:space-y-2 mb-2 sm:mb-3">
+                    <div className="bg-white rounded-md p-2 sm:p-3 border border-gray-300 flex justify-between items-center">
+                      <span className="text-xs sm:text-sm font-medium text-gray-700">Calentamiento</span>
+                      <span className="text-sm sm:text-lg font-bold text-orange-600">{warmupDistance}m</span>
                     </div>
-                    <div className="bg-white rounded-md p-3 border border-gray-300 flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-700">Serie Principal</span>
-                      <span className="text-lg font-bold text-purple-600">{mainSetDistance}m</span>
+                    <div className="bg-white rounded-md p-2 sm:p-3 border border-gray-300 flex justify-between items-center">
+                      <span className="text-xs sm:text-sm font-medium text-gray-700">Serie Principal</span>
+                      <span className="text-sm sm:text-lg font-bold text-purple-600">{mainSetDistance}m</span>
                     </div>
-                    <div className="bg-white rounded-md p-3 border border-gray-300 flex justify-between items-center">
-                      <span className="text-sm font-medium text-gray-700">Enfriamiento</span>
-                      <span className="text-lg font-bold text-cyan-600">{cooldownDistance}m</span>
+                    <div className="bg-white rounded-md p-2 sm:p-3 border border-gray-300 flex justify-between items-center">
+                      <span className="text-xs sm:text-sm font-medium text-gray-700">Enfriamiento</span>
+                      <span className="text-sm sm:text-lg font-bold text-cyan-600">{cooldownDistance}m</span>
                     </div>
                   </div>
 
                   {/* Total */}
-                  <div className="bg-white rounded-md p-4 border-2 border-blue-400 shadow-md">
-                    <Label className="text-sm text-gray-600 mb-2 block">Distancia Total</Label>
-                    <div className="text-4xl font-bold text-blue-600">
+                  <div className="bg-white rounded-md p-3 sm:p-4 border-2 border-blue-400 shadow-md">
+                    <Label className="text-xs sm:text-sm text-gray-600 mb-1 sm:mb-2 block">Distancia Total</Label>
+                    <div className="text-2xl sm:text-4xl font-bold text-blue-600">
                       {calculatedDistance}m
                     </div>
                   </div>
-                  <div className="mt-3 text-xs text-gray-600 bg-white p-2 rounded border border-gray-200">
+                  <div className="mt-2 sm:mt-3 text-[10px] sm:text-xs text-gray-600 bg-white p-1.5 sm:p-2 rounded border border-gray-200">
                     <strong>💡 Tip:</strong> Escribe las distancias en formato "300m", "4x100m", "8 x 50m" para cálculo automático
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Calentamiento</Label>
+                  <Label className="text-sm">Calentamiento</Label>
                   <Input
                     placeholder="Ej: 300m estilo libre suave + 200m técnica"
                     value={workoutFormData.warmup}
                     onChange={(e) => setWorkoutFormData({ ...workoutFormData, warmup: e.target.value })}
+                    className="text-sm"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Series Principales</Label>
+                  <Label className="text-sm">Series Principales</Label>
                   {workoutFormData.mainSet.map((item, index) => (
-                    <div key={`mainset-${index}`} className="flex gap-2">
+                    <div key={`mainset-${index}`} className="flex gap-1.5 sm:gap-2">
                       <Input
                         placeholder="Ej: 4 x 100m estilo libre (descanso 20s)"
                         value={item}
                         onChange={(e) => updateMainSet(index, e.target.value)}
+                        className="text-sm"
                       />
                       {workoutFormData.mainSet.length > 1 && (
                         <Button
@@ -998,31 +979,33 @@ export function UnifiedCalendarManager({
                           variant="outline"
                           size="sm"
                           onClick={() => removeMainSetItem(index)}
+                          className="flex-shrink-0 px-2 sm:px-3"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
                         </Button>
                       )}
                     </div>
                   ))}
-                  <Button type="button" variant="outline" size="sm" onClick={addMainSetItem}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Agregar Serie
+                  <Button type="button" variant="outline" size="sm" onClick={addMainSetItem} className="w-full sm:w-auto">
+                    <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                    <span className="text-xs sm:text-sm">Agregar Serie</span>
                   </Button>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Enfriamiento</Label>
+                  <Label className="text-sm">Enfriamiento</Label>
                   <Input
                     placeholder="Ej: 200m estilo libre suave"
                     value={workoutFormData.cooldown}
                     onChange={(e) => setWorkoutFormData({ ...workoutFormData, cooldown: e.target.value })}
+                    className="text-sm"
                   />
                 </div>
 
                 {/* Modo Multi-Día */}
                 {!editingWorkout && (
-                  <div className="border-t pt-4 mt-4">
-                    <div className="flex items-center space-x-2 mb-3">
+                  <div className="border-t pt-3 sm:pt-4 mt-3 sm:mt-4">
+                    <div className="flex items-center space-x-2 mb-2 sm:mb-3">
                       <Checkbox
                         id="multi-day-mode"
                         checked={multiDayMode}
@@ -1033,21 +1016,21 @@ export function UnifiedCalendarManager({
                           }
                         }}
                       />
-                      <Label 
-                        htmlFor="multi-day-mode" 
-                        className="flex items-center gap-2 cursor-pointer"
+                      <Label
+                        htmlFor="multi-day-mode"
+                        className="flex items-center gap-1.5 sm:gap-2 cursor-pointer"
                       >
-                        <CalendarIcon className="w-4 h-4 text-blue-600" />
-                        <span className="font-semibold">Crear para múltiples días</span>
+                        <CalendarIcon className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
+                        <span className="font-semibold text-xs sm:text-sm">Crear para múltiples días</span>
                       </Label>
                     </div>
-                    
+
                     {multiDayMode && (
-                      <div className="space-y-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                        <p className="text-sm text-gray-700 mb-2">
+                      <div className="space-y-2 p-2 sm:p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <p className="text-xs sm:text-sm text-gray-700 mb-2">
                           Selecciona los días para los cuales crear este entrenamiento:
                         </p>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-1.5 sm:gap-2">
                           {availableDays.map(day => (
                             <Button
                               key={day}
@@ -1055,7 +1038,7 @@ export function UnifiedCalendarManager({
                               size="sm"
                               variant={selectedDays.includes(day) ? "default" : "outline"}
                               onClick={() => toggleDaySelection(day)}
-                              className={selectedDays.includes(day) ? 'bg-blue-600 hover:bg-blue-700' : ''}
+                              className={`text-xs sm:text-sm px-2 sm:px-3 py-1 ${selectedDays.includes(day) ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
                             >
                               {day}
                             </Button>
@@ -1073,31 +1056,33 @@ export function UnifiedCalendarManager({
               </div>
             ) : (
               // Formulario de Desafío
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-3 sm:gap-4 py-2 sm:py-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="space-y-2">
-                    <Label>Semana</Label>
+                    <Label className="text-sm">Semana</Label>
                     <Input
                       type="number"
                       min="1"
                       max="20"
                       value={challengeFormData.week}
                       onChange={(e) => setChallengeFormData({ ...challengeFormData, week: parseInt(e.target.value) })}
+                      className="text-sm"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Fecha</Label>
+                    <Label className="text-sm">Fecha</Label>
                     <Input
                       placeholder="Ej: 7 de marzo"
                       value={challengeFormData.date}
                       onChange={(e) => setChallengeFormData({ ...challengeFormData, date: e.target.value })}
+                      className="text-sm"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="space-y-2">
-                    <Label>Día</Label>
+                    <Label className="text-sm">Día</Label>
                     <Select value={challengeFormData.day} onValueChange={(value) => setChallengeFormData({ ...challengeFormData, day: value })}>
                       <SelectTrigger>
                         <SelectValue />
@@ -1114,7 +1099,7 @@ export function UnifiedCalendarManager({
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Mesociclo</Label>
+                    <Label className="text-sm">Mesociclo</Label>
                     <Select value={challengeFormData.mesociclo} onValueChange={(value) => setChallengeFormData({ ...challengeFormData, mesociclo: value })}>
                       <SelectTrigger>
                         <SelectValue />
@@ -1130,47 +1115,51 @@ export function UnifiedCalendarManager({
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Nombre del Desafío</Label>
+                  <Label className="text-sm">Nombre del Desafío</Label>
                   <Input
                     placeholder="Ej: Desafío de los 4 Estilos"
                     value={challengeFormData.challengeName}
                     onChange={(e) => setChallengeFormData({ ...challengeFormData, challengeName: e.target.value })}
+                    className="text-sm"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Descripción</Label>
+                  <Label className="text-sm">Descripción</Label>
                   <Textarea
                     placeholder="Descripción del desafío..."
                     value={challengeFormData.description}
                     onChange={(e) => setChallengeFormData({ ...challengeFormData, description: e.target.value })}
                     rows={2}
+                    className="text-sm"
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                   <div className="space-y-2">
-                    <Label>Distancia (m)</Label>
+                    <Label className="text-sm">Distancia (m)</Label>
                     <Input
                       type="number"
                       min="1000"
                       step="100"
                       value={challengeFormData.distance}
                       onChange={(e) => setChallengeFormData({ ...challengeFormData, distance: parseInt(e.target.value) })}
+                      className="text-sm"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Duración (min)</Label>
+                    <Label className="text-sm">Duración (min)</Label>
                     <Input
                       type="number"
                       min="30"
                       step="5"
                       value={challengeFormData.duration}
                       onChange={(e) => setChallengeFormData({ ...challengeFormData, duration: parseInt(e.target.value) })}
+                      className="text-sm"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Intensidad</Label>
+                    <Label className="text-sm">Intensidad</Label>
                     <Select value={challengeFormData.intensity} onValueChange={(value) => setChallengeFormData({ ...challengeFormData, intensity: value })}>
                       <SelectTrigger>
                         <SelectValue />
@@ -1186,13 +1175,14 @@ export function UnifiedCalendarManager({
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Reglas</Label>
+                  <Label className="text-sm">Reglas</Label>
                   {challengeFormData.rules.map((rule, index) => (
-                    <div key={`rule-${index}`} className="flex gap-2">
+                    <div key={`rule-${index}`} className="flex gap-1.5 sm:gap-2">
                       <Input
                         placeholder="Regla del desafío..."
                         value={rule}
                         onChange={(e) => updateRule(index, e.target.value)}
+                        className="text-sm"
                       />
                       {challengeFormData.rules.length > 1 && (
                         <Button
@@ -1200,38 +1190,40 @@ export function UnifiedCalendarManager({
                           variant="outline"
                           size="sm"
                           onClick={() => removeRule(index)}
+                          className="flex-shrink-0 px-2 sm:px-3"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
                         </Button>
                       )}
                     </div>
                   ))}
-                  <Button type="button" variant="outline" size="sm" onClick={addRule}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Agregar Regla
+                  <Button type="button" variant="outline" size="sm" onClick={addRule} className="w-full sm:w-auto">
+                    <Plus className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+                    <span className="text-xs sm:text-sm">Agregar Regla</span>
                   </Button>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Premios</Label>
+                  <Label className="text-sm">Premios</Label>
                   <Input
                     placeholder="Ej: El equipo ganador elige la música del próximo entrenamiento"
                     value={challengeFormData.prizes}
                     onChange={(e) => setChallengeFormData({ ...challengeFormData, prizes: e.target.value })}
+                    className="text-sm"
                   />
                 </div>
               </div>
             )}
 
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+            <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-0">
+              <Button variant="outline" onClick={() => setDialogOpen(false)} className="w-full sm:w-auto">
                 Cancelar
               </Button>
-              <Button 
+              <Button
                 onClick={handleSubmit}
-                className={eventType === "workout" ? "" : "bg-orange-600 hover:bg-orange-700"}
+                className={`w-full sm:w-auto ${eventType === "workout" ? "" : "bg-orange-600 hover:bg-orange-700"}`}
               >
-                {eventType === "workout" 
+                {eventType === "workout"
                   ? (editingWorkout ? "Guardar Cambios" : "Crear Entrenamiento")
                   : (editingChallenge ? "Guardar Cambios" : "Crear Desafío")}
               </Button>

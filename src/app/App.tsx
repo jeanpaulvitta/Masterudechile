@@ -1132,7 +1132,6 @@ function MainApp() {
                   onAddChallenge={handleAddChallenge}
                   onEditChallenge={handleEditChallenge}
                   onDeleteChallenge={handleDeleteChallenge}
-                  onSyncFromLocal={handleSyncFromLocal}
                   onCleanDuplicates={handleCleanDuplicateWorkouts}
                 />
 

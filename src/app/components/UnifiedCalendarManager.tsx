@@ -7,7 +7,7 @@ import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Checkbox } from "./ui/checkbox";
 import { Textarea } from "./ui/textarea";
-import { Plus, Edit, Trash2, Dumbbell, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Waves, Trophy } from "lucide-react";
+import { Plus, Edit, Trash2, Calendar as CalendarIcon, ChevronLeft, ChevronRight, Waves, Trophy } from "lucide-react";
 import type { Workout } from "../data/workouts";
 import type { Challenge } from "../data/challenges";
 import { useAuth } from "../contexts/AuthContext";
@@ -66,6 +66,7 @@ export function UnifiedCalendarManager({
   const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null);
   const [editingChallenge, setEditingChallenge] = useState<Challenge | null>(null);
   const [selectedDay, setSelectedDay] = useState<CalendarDay | null>(null);
+  const [viewDetailsDay, setViewDetailsDay] = useState<CalendarDay | null>(null);
   
   // Estados para entrenamientos
   const [multiDayMode, setMultiDayMode] = useState(false);
@@ -86,25 +87,44 @@ export function UnifiedCalendarManager({
 
   // Función auxiliar para calcular distancia de un texto
   const calculateDistanceFromText = (text: string): number => {
-    let total = 0;
-    const patterns = [
-      /(\d+)\s*x\s*(\d+)\s*m/gi,  // 4x100m, 4 x 100m
-      /(\d+)\s*m/gi,               // 300m, 200m
-    ];
+    if (!text || text.trim() === '') return 0;
 
-    patterns.forEach(pattern => {
-      const matches = text.matchAll(pattern);
-      for (const match of matches) {
-        if (match[2]) {
-          // Formato NxDm (ej: 4x100m)
-          const reps = parseInt(match[1]);
-          const distance = parseInt(match[2]);
-          total += reps * distance;
-        } else if (match[1]) {
-          // Formato Dm (ej: 300m)
-          total += parseInt(match[1]);
-        }
-      }
+    let total = 0;
+    let processedText = text.toLowerCase();
+
+    // 1. Procesar series anidadas primero: 2x(4x100m)
+    const nestedPattern = /(\d+)\s*[x*×]\s*\(([^)]+)\)/gi;
+    processedText = processedText.replace(nestedPattern, (match, reps, innerContent) => {
+      const outerReps = parseInt(reps);
+      const innerDistance = calculateDistanceFromText(innerContent);
+      total += outerReps * innerDistance;
+      return ' '; // Reemplazar con espacio para no volver a procesar
+    });
+
+    // 2. Procesar kilómetros: 1.5km, 2km, 1,5km
+    const kmPattern = /(\d+)[.,]?(\d*)\s*k(?:m|ilómetros?)?(?!\d)/gi;
+    processedText = processedText.replace(kmPattern, (match, num1, num2) => {
+      const km = parseFloat((num1 + (num2 ? '.' + num2 : '')).replace(',', '.'));
+      total += km * 1000;
+      return ' '; // Reemplazar con espacio
+    });
+
+    // 3. Procesar formato con multiplicador: 4x100m, 4 x 100m, 4*100, 8x50
+    const multiplierPattern = /(\d+)\s*[x*×]\s*(\d+)(?:\s*m(?:etros?)?)?/gi;
+    processedText = processedText.replace(multiplierPattern, (match, reps, dist) => {
+      const repetitions = parseInt(reps);
+      const distance = parseInt(dist);
+      total += repetitions * distance;
+      return ' '; // Reemplazar con espacio
+    });
+
+    // 4. Procesar metros simples: 300m, 200 metros, 1500m, 1.500m (solo los que quedaron)
+    const metersPattern = /(\d{1,3}(?:[.,]\d{3})*|\d+)\s*m(?:etros?)?/gi;
+    processedText = processedText.replace(metersPattern, (match, num) => {
+      // Remover separadores de miles (puntos o comas)
+      const cleanNumber = num.replace(/[.,]/g, '');
+      total += parseInt(cleanNumber);
+      return ' '; // Reemplazar con espacio
     });
 
     return total;
@@ -560,8 +580,10 @@ export function UnifiedCalendarManager({
   }
 
   return (
-    <Card>
-      <CardHeader className="px-2 sm:px-6 py-2 sm:py-4">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 sm:gap-4">
+      {/* Calendario */}
+      <Card className={viewDetailsDay ? "lg:col-span-2" : "lg:col-span-3"}>
+        <CardHeader className="px-2 sm:px-6 py-2 sm:py-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
           <div className="flex items-center gap-1.5 sm:gap-2">
             <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
@@ -612,21 +634,26 @@ export function UnifiedCalendarManager({
           </div>
 
           {/* Info */}
-          <div className="flex items-center justify-center gap-2 sm:gap-3 bg-gradient-to-r from-blue-50 via-purple-50 to-orange-50 rounded-lg p-1.5 sm:p-3 border border-gray-200">
-            <div className="flex items-center gap-1 sm:gap-2 bg-white rounded-md px-1.5 sm:px-3 py-0.5 sm:py-1.5 shadow-sm">
-              <Waves className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 flex-shrink-0" />
-              <span className="text-[10px] sm:text-sm font-semibold text-gray-700">
-                <span className="text-blue-600">{workouts.length}</span>
-                <span className="hidden sm:inline ml-1">Entrenamientos</span>
-              </span>
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-center gap-2 sm:gap-3 bg-gradient-to-r from-blue-50 via-purple-50 to-orange-50 rounded-lg p-1.5 sm:p-3 border border-gray-200">
+              <div className="flex items-center gap-1 sm:gap-2 bg-white rounded-md px-1.5 sm:px-3 py-0.5 sm:py-1.5 shadow-sm">
+                <Waves className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600 flex-shrink-0" />
+                <span className="text-[10px] sm:text-sm font-semibold text-gray-700">
+                  <span className="text-blue-600">{workouts.length}</span>
+                  <span className="hidden sm:inline ml-1">Entrenamientos</span>
+                </span>
+              </div>
+              <div className="flex items-center gap-1 sm:gap-2 bg-white rounded-md px-1.5 sm:px-3 py-0.5 sm:py-1.5 shadow-sm">
+                <Trophy className="w-3 h-3 sm:w-4 sm:h-4 text-orange-600 flex-shrink-0" />
+                <span className="text-[10px] sm:text-sm font-semibold text-gray-700">
+                  <span className="text-orange-600">{challenges.length}</span>
+                  <span className="hidden sm:inline ml-1">Desafíos</span>
+                </span>
+              </div>
             </div>
-            <div className="flex items-center gap-1 sm:gap-2 bg-white rounded-md px-1.5 sm:px-3 py-0.5 sm:py-1.5 shadow-sm">
-              <Trophy className="w-3 h-3 sm:w-4 sm:h-4 text-orange-600 flex-shrink-0" />
-              <span className="text-[10px] sm:text-sm font-semibold text-gray-700">
-                <span className="text-orange-600">{challenges.length}</span>
-                <span className="hidden sm:inline ml-1">Desafíos</span>
-              </span>
-            </div>
+            <p className="text-center text-[9px] sm:text-xs text-gray-500">
+              💡 Haz clic en un día para ver los detalles del entrenamiento
+            </p>
           </div>
         </div>
 
@@ -651,16 +678,30 @@ export function UnifiedCalendarManager({
             return (
               <div
                 key={index}
+                onClick={() => hasEvents && setViewDetailsDay(day)}
                 className={`
                   group/day min-h-[65px] sm:min-h-[110px] p-0.5 sm:p-1.5 rounded-sm sm:rounded-lg border transition-all text-left relative
                   ${day.isCurrentMonth ? "bg-white hover:bg-gray-50/50" : "bg-gray-50 opacity-40"}
                   ${day.isToday ? "border-2 border-blue-500 ring-1 sm:ring-2 ring-blue-200 shadow-md" : "border-gray-200"}
-                  ${hasEvents ? "border-blue-300 bg-blue-50/30" : "hover:border-gray-300"}
+                  ${hasEvents ? "border-blue-300 bg-blue-50/30 cursor-pointer" : "hover:border-gray-300"}
+                  ${viewDetailsDay?.dateString === day.dateString ? "ring-2 ring-blue-400 bg-blue-100/50" : ""}
                 `}
               >
                 <div className="flex flex-col h-full">
+                  {/* Indicador de eventos en la parte superior */}
+                  {hasEvents && (
+                    <div className="absolute top-0 left-0 right-0 flex gap-0.5 px-0.5 pt-0.5">
+                      {day.workouts.length > 0 && (
+                        <div className="h-0.5 sm:h-1 bg-blue-500 rounded-full flex-1"></div>
+                      )}
+                      {day.challenges.length > 0 && (
+                        <div className="h-0.5 sm:h-1 bg-orange-500 rounded-full flex-1"></div>
+                      )}
+                    </div>
+                  )}
+
                   {/* Número del día */}
-                  <div className="flex items-center justify-between mb-0.5">
+                  <div className="flex items-center justify-between mb-0.5 mt-1">
                     <span
                       className={`text-[10px] sm:text-sm font-bold ${
                         day.isToday
@@ -687,31 +728,33 @@ export function UnifiedCalendarManager({
                       const colors = block ? getBlockColors(block.color) : { bg: 'bg-blue-100', border: 'border-blue-300', text: 'text-blue-700' };
 
                       // Tooltip detallado
-                      const tooltipText = `Semana ${workout.week}\n${workout.mesociclo} • ${workout.distance}m • ${workout.duration}min`;
+                      const tooltipText = `${workout.mesociclo} • ${workout.distance}m • ${workout.duration}min • ${workout.intensity}`;
 
                       return (
                         <div
                           key={workout.id}
-                          onClick={(e) => handleWorkoutClick(workout, e)}
-                          className={`group relative ${colors.bg} hover:opacity-90 border ${colors.border} rounded-sm sm:rounded-md px-0.5 sm:px-1.5 py-0.5 sm:py-1 transition-all cursor-pointer shadow-sm hover:shadow`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleWorkoutClick(workout, e);
+                          }}
+                          className={`group relative ${colors.bg} hover:opacity-90 border ${colors.border} rounded-sm sm:rounded-md px-1 sm:px-2 py-0.5 sm:py-1 transition-all cursor-pointer shadow-sm hover:shadow`}
                           title={tooltipText}
                         >
-                          <div className="flex items-center justify-between gap-0.5">
+                          <div className="flex items-center justify-between gap-0.5 sm:gap-1">
                             <div className="flex items-center gap-0.5 sm:gap-1 flex-1 min-w-0">
-                              <span className={`text-[7px] sm:text-[10px] font-bold ${colors.text} leading-none flex-shrink-0`}>
-                                S{workout.week}
-                              </span>
                               <Waves className="w-2 h-2 sm:w-3 sm:h-3 flex-shrink-0" style={{ color: block ? `var(--color-${block.color}-600)` : '#2563eb' }} />
-                              <span className={`text-[7px] sm:text-[10px] font-semibold ${colors.text} truncate`}>
+                              <span className={`text-[8px] sm:text-[11px] font-bold ${colors.text} truncate`}>
                                 {workout.distance}m
                               </span>
                             </div>
-                            <button
-                              onClick={(e) => workout.id && handleDeleteWorkout(workout.id, e)}
-                              className="opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0"
-                            >
-                              <Trash2 className="w-2 h-2 sm:w-3 sm:h-3 text-red-600" />
-                            </button>
+                            {isAdmin && (
+                              <button
+                                onClick={(e) => workout.id && handleDeleteWorkout(workout.id, e)}
+                                className="opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0"
+                              >
+                                <Trash2 className="w-2 h-2 sm:w-3 sm:h-3 text-red-600" />
+                              </button>
+                            )}
                           </div>
                         </div>
                       );
@@ -720,31 +763,33 @@ export function UnifiedCalendarManager({
                     {/* Desafíos */}
                     {day.challenges.slice(0, 1).map((challenge) => {
                       // Tooltip detallado para desafíos
-                      const tooltipText = `Desafío • Semana ${challenge.week}\n${challenge.challengeName}\n${challenge.distance}m • ${challenge.duration}min`;
+                      const tooltipText = `${challenge.challengeName}\n${challenge.distance}m • ${challenge.duration}min`;
 
                       return (
                         <div
                           key={challenge.id}
-                          onClick={(e) => handleChallengeClick(challenge, e)}
-                          className="group relative bg-gradient-to-r from-orange-100 to-amber-100 hover:opacity-90 border border-orange-300 rounded-sm sm:rounded-md px-0.5 sm:px-1.5 py-0.5 sm:py-1 transition-all cursor-pointer shadow-sm hover:shadow"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleChallengeClick(challenge, e);
+                          }}
+                          className="group relative bg-gradient-to-r from-orange-100 to-amber-100 hover:opacity-90 border border-orange-300 rounded-sm sm:rounded-md px-1 sm:px-2 py-0.5 sm:py-1 transition-all cursor-pointer shadow-sm hover:shadow"
                           title={tooltipText}
                         >
-                          <div className="flex items-center justify-between gap-0.5">
+                          <div className="flex items-center justify-between gap-0.5 sm:gap-1">
                             <div className="flex items-center gap-0.5 sm:gap-1 flex-1 min-w-0">
                               <Trophy className="w-2 h-2 sm:w-3 sm:h-3 text-orange-600 flex-shrink-0" />
-                              <span className="text-[7px] sm:text-[10px] font-bold text-orange-900 leading-none flex-shrink-0">
-                                S{challenge.week}
-                              </span>
-                              <span className="text-[7px] sm:text-[10px] font-semibold text-orange-900 truncate ml-0.5">
+                              <span className="text-[8px] sm:text-[11px] font-bold text-orange-900 truncate">
                                 {challenge.challengeName}
                               </span>
                             </div>
-                            <button
-                              onClick={(e) => challenge.id && handleDeleteChallenge(challenge.id, e)}
-                              className="opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0"
-                            >
-                              <Trash2 className="w-2 h-2 sm:w-3 sm:h-3 text-red-600" />
-                            </button>
+                            {isAdmin && (
+                              <button
+                                onClick={(e) => challenge.id && handleDeleteChallenge(challenge.id, e)}
+                                className="opacity-0 sm:group-hover:opacity-100 transition-opacity flex-shrink-0"
+                              >
+                                <Trash2 className="w-2 h-2 sm:w-3 sm:h-3 text-red-600" />
+                              </button>
+                            )}
                           </div>
                         </div>
                       );
@@ -949,14 +994,14 @@ export function UnifiedCalendarManager({
                     </div>
                   </div>
                   <div className="mt-2 sm:mt-3 text-[10px] sm:text-xs text-gray-600 bg-white p-1.5 sm:p-2 rounded border border-gray-200">
-                    <strong>💡 Tip:</strong> Escribe las distancias en formato "300m", "4x100m", "8 x 50m" para cálculo automático
+                    <strong>💡 Tip:</strong> Formatos soportados: "300m", "4x100m", "8*50", "1.5km", "2x(4x100m)", "200 metros"
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label className="text-sm">Calentamiento</Label>
                   <Input
-                    placeholder="Ej: 300m estilo libre suave + 200m técnica"
+                    placeholder="Ej: 300m libre suave + 200m técnica, 500 metros combinado"
                     value={workoutFormData.warmup}
                     onChange={(e) => setWorkoutFormData({ ...workoutFormData, warmup: e.target.value })}
                     className="text-sm"
@@ -968,7 +1013,7 @@ export function UnifiedCalendarManager({
                   {workoutFormData.mainSet.map((item, index) => (
                     <div key={`mainset-${index}`} className="flex gap-1.5 sm:gap-2">
                       <Input
-                        placeholder="Ej: 4 x 100m estilo libre (descanso 20s)"
+                        placeholder="Ej: 4x100m libre, 8*50 técnica, 2x(4x100m)"
                         value={item}
                         onChange={(e) => updateMainSet(index, e.target.value)}
                         className="text-sm"
@@ -995,7 +1040,7 @@ export function UnifiedCalendarManager({
                 <div className="space-y-2">
                   <Label className="text-sm">Enfriamiento</Label>
                   <Input
-                    placeholder="Ej: 200m estilo libre suave"
+                    placeholder="Ej: 200m libre suave, 150 metros relajado"
                     value={workoutFormData.cooldown}
                     onChange={(e) => setWorkoutFormData({ ...workoutFormData, cooldown: e.target.value })}
                     className="text-sm"
@@ -1232,5 +1277,167 @@ export function UnifiedCalendarManager({
         </Dialog>
       </CardContent>
     </Card>
+
+      {/* Panel de detalles del día seleccionado */}
+      {viewDetailsDay && (
+        <Card className="lg:col-span-1 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] flex flex-col">
+          <CardHeader className="px-3 sm:px-6 py-3 sm:py-4 flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base sm:text-lg">
+                {viewDetailsDay.date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setViewDetailsDay(null)}
+                className="h-7 w-7 p-0"
+              >
+                ×
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="px-3 sm:px-6 py-3 sm:py-4 space-y-4 overflow-y-auto flex-1">
+            {/* Entrenamientos del día */}
+            {viewDetailsDay.workouts.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                  <Waves className="w-4 h-4 text-blue-600" />
+                  Entrenamientos
+                </h3>
+                {viewDetailsDay.workouts.map((workout) => {
+                  const block = getBlockForWeek(workout.week);
+                  const colors = block ? getBlockColors(block.color) : { bg: 'bg-blue-100', border: 'border-blue-300', text: 'text-blue-700' };
+
+                  return (
+                    <div key={workout.id} className={`${colors.bg} border ${colors.border} rounded-lg p-3 space-y-2`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-3 h-3 rounded-full ${colors.bg} ${colors.border} border-2`}></div>
+                          <span className={`text-sm font-bold ${colors.text}`}>{workout.mesociclo}</span>
+                        </div>
+                        {isAdmin && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditWorkout(workout);
+                            }}
+                            className="text-blue-600 hover:text-blue-800 text-xs"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-gray-600">Distancia:</span>
+                          <span className={`font-bold ${colors.text}`}>{workout.distance}m</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-gray-600">Duración:</span>
+                          <span className="font-semibold text-gray-700">{workout.duration} min</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-gray-600">Intensidad:</span>
+                          <span className="font-semibold text-gray-700">{workout.intensity}</span>
+                        </div>
+                      </div>
+
+                      {workout.warmup && (
+                        <div className="pt-2 border-t border-gray-200">
+                          <p className="text-xs font-semibold text-orange-600 mb-1">Calentamiento</p>
+                          <p className="text-xs text-gray-700">{workout.warmup}</p>
+                        </div>
+                      )}
+
+                      {workout.mainSet && workout.mainSet.length > 0 && workout.mainSet[0] && (
+                        <div className="pt-2 border-t border-gray-200">
+                          <p className="text-xs font-semibold text-purple-600 mb-1">Serie Principal</p>
+                          <div className="space-y-1">
+                            {workout.mainSet.map((set, idx) => (
+                              <p key={idx} className="text-xs text-gray-700">• {set}</p>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {workout.cooldown && (
+                        <div className="pt-2 border-t border-gray-200">
+                          <p className="text-xs font-semibold text-cyan-600 mb-1">Enfriamiento</p>
+                          <p className="text-xs text-gray-700">{workout.cooldown}</p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Desafíos del día */}
+            {viewDetailsDay.challenges.length > 0 && (
+              <div className="space-y-3">
+                <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                  <Trophy className="w-4 h-4 text-orange-600" />
+                  Desafíos
+                </h3>
+                {viewDetailsDay.challenges.map((challenge) => (
+                  <div key={challenge.id} className="bg-gradient-to-r from-orange-100 to-amber-100 border border-orange-300 rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-bold text-orange-900">{challenge.challengeName}</span>
+                      {isAdmin && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditChallenge(challenge);
+                          }}
+                          className="text-orange-600 hover:text-orange-800 text-xs"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-gray-700">{challenge.description}</p>
+
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-gray-600">Distancia:</span>
+                        <span className="font-bold text-orange-900">{challenge.distance}m</span>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-gray-600">Duración:</span>
+                        <span className="font-semibold text-gray-700">{challenge.duration} min</span>
+                      </div>
+                    </div>
+
+                    {challenge.rules && challenge.rules.length > 0 && challenge.rules[0] && (
+                      <div className="pt-2 border-t border-orange-200">
+                        <p className="text-xs font-semibold text-orange-800 mb-1">Reglas</p>
+                        <div className="space-y-1">
+                          {challenge.rules.map((rule, idx) => (
+                            <p key={idx} className="text-xs text-gray-700">• {rule}</p>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {challenge.prizes && (
+                      <div className="pt-2 border-t border-orange-200">
+                        <p className="text-xs font-semibold text-orange-800 mb-1">Premios</p>
+                        <p className="text-xs text-gray-700">{challenge.prizes}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {viewDetailsDay.workouts.length === 0 && viewDetailsDay.challenges.length === 0 && (
+              <p className="text-sm text-gray-500 text-center py-8">No hay entrenamientos ni desafíos para este día</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }

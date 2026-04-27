@@ -4,7 +4,6 @@ import { Card, CardContent } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 import { Target, TrendingUp, CalendarDays, Trophy, ChevronRight } from "lucide-react";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "./ui/accordion";
 import { WorkoutCard } from "./WorkoutCard";
 import { ChallengeCard } from "./ChallengeCard";
 
@@ -44,6 +43,7 @@ interface MesocicloDialogProps {
 
 export function MesocicloDialog({ mesociclo, sessions }: MesocicloDialogProps) {
   const [open, setOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const Icon = mesociclo.icon;
 
   // Mapeo de bloques a rangos de semanas
@@ -81,41 +81,61 @@ export function MesocicloDialog({ mesociclo, sessions }: MesocicloDialogProps) {
     return false;
   });
   
-  // Agrupar por semana
-  const sessionsByWeek: { [key: number]: SessionType[] } = {};
+  // Agrupar por fecha
+  const sessionsByDate: { [key: string]: SessionType[] } = {};
   mesocicloSessions.forEach((session) => {
-    if (!sessionsByWeek[session.week]) {
-      sessionsByWeek[session.week] = [];
+    const dateKey = session.date; // Usar la fecha como clave
+    if (!sessionsByDate[dateKey]) {
+      sessionsByDate[dateKey] = [];
     }
-    sessionsByWeek[session.week].push(session);
+    sessionsByDate[dateKey].push(session);
   });
 
-  // Ordenar las sesiones dentro de cada semana (Lunes, Miércoles, Viernes, Sábado)
-  Object.keys(sessionsByWeek).forEach((weekKey) => {
-    const dayOrder: { [key: string]: number } = {
-      'Lunes': 1,
-      'Martes': 2,
-      'Miércoles': 3,
-      'Jueves': 4,
-      'Viernes': 5,
-      'Sábado': 6,
-      'Domingo': 7
-    };
-    
-    sessionsByWeek[Number(weekKey)].sort((a, b) => {
-      // Ordenar por día de la semana
-      const dayComparison = (dayOrder[a.day] || 0) - (dayOrder[b.day] || 0);
-      if (dayComparison !== 0) return dayComparison;
-      
-      // Si es el mismo día, ordenar por horario (AM antes que PM)
+  // Ordenar las sesiones dentro de cada fecha por horario
+  Object.keys(sessionsByDate).forEach((dateKey) => {
+    sessionsByDate[dateKey].sort((a, b) => {
+      // Ordenar por horario (AM antes que PM)
       const scheduleA = (a as any).schedule || 'AM';
       const scheduleB = (b as any).schedule || 'AM';
       if (scheduleA === 'AM' && scheduleB === 'PM') return -1;
       if (scheduleA === 'PM' && scheduleB === 'AM') return 1;
-      
       return 0;
     });
   });
+
+  // Obtener fechas ordenadas
+  const sortedDates = Object.keys(sessionsByDate).sort((a, b) => {
+    // Parsear fechas en formato "3 de marzo"
+    const parseDate = (dateStr: string) => {
+      const monthMap: { [key: string]: number } = {
+        'enero': 0, 'febrero': 1, 'marzo': 2, 'abril': 3,
+        'mayo': 4, 'junio': 5, 'julio': 6, 'agosto': 7,
+        'septiembre': 8, 'octubre': 9, 'noviembre': 10, 'diciembre': 11
+      };
+
+      const regex = /(\d+)\s+de\s+(\w+)/i;
+      const match = dateStr.match(regex);
+
+      if (match) {
+        const day = parseInt(match[1]);
+        const monthName = match[2].toLowerCase();
+        const month = monthMap[monthName];
+
+        // La temporada va de marzo 2026 a enero 2027
+        const year = (month >= 2 && month <= 11) ? 2026 : 2027;
+        return new Date(year, month, day);
+      }
+
+      return new Date(0);
+    };
+
+    return parseDate(a).getTime() - parseDate(b).getTime();
+  });
+
+  // Establecer la primera fecha como seleccionada si no hay ninguna
+  if (!selectedDate && sortedDates.length > 0) {
+    setSelectedDate(sortedDates[0]);
+  }
 
   // Calcular estadísticas
   const totalWorkouts = mesocicloSessions.filter(s => s.type === 'workout').length;
@@ -234,74 +254,93 @@ export function MesocicloDialog({ mesociclo, sessions }: MesocicloDialogProps) {
           </CardContent>
         </Card>
 
-        {/* Acordeón de entrenamientos por semana */}
-        <Accordion type="multiple" className="space-y-4 mt-6">
-          {Object.keys(sessionsByWeek)
-            .map(Number)
-            .sort((a, b) => a - b)
-            .map((weekNumber) => {
-              const weekSessions = sessionsByWeek[weekNumber];
-              
-              if (!weekSessions || weekSessions.length === 0) {
-                return null;
-              }
-              
-              const weekWorkouts = weekSessions.filter(s => s.type === 'workout');
-              const weekChallenge = weekSessions.find(s => s.type === 'challenge');
-              const weekDistance = weekSessions.reduce((sum, s) => sum + s.distance, 0);
-              
-              // Formatear número de semana para negativos (Mantenimiento)
-              const weekLabel = weekNumber < 0 ? `M${Math.abs(weekNumber)}` : weekNumber.toString();
-              
-              return (
-                <AccordionItem 
-                  key={weekNumber} 
-                  value={`week-${weekNumber}`}
-                  className="border rounded-lg px-2 sm:px-4 bg-white shadow-sm hover:shadow-md transition-shadow"
-                >
-                  <AccordionTrigger className="hover:no-underline py-2 sm:py-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full pr-2 sm:pr-4 gap-1 sm:gap-0">
-                      <div className="flex items-center gap-2 sm:gap-4">
-                        <div className="flex flex-col items-start">
-                          <span className="font-bold text-sm sm:text-lg">Semana {weekLabel}</span>
-                          <span className="text-[10px] sm:text-sm text-gray-600">{weekSessions[0]?.date || ''}</span>
+        {/* Selector de fechas y vista de entrenamientos */}
+        <div className="mt-6 space-y-4">
+          {/* Selector de fechas */}
+          <div className={`border-2 rounded-lg p-3 sm:p-4 ${mesociclo.bgColor} ${mesociclo.borderColor}`}>
+            <div className="flex items-center gap-2 mb-3">
+              <CalendarDays className={`w-4 h-4 sm:w-5 sm:h-5 ${mesociclo.color}`} />
+              <h3 className="text-sm sm:text-base font-bold text-gray-800">Selecciona una fecha</h3>
+            </div>
+            <div className="max-h-[300px] overflow-y-auto pr-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
+                {sortedDates.map((date) => {
+                  const dateSessions = sessionsByDate[date];
+                  const hasWorkouts = dateSessions.some(s => s.type === 'workout');
+                  const hasChallenges = dateSessions.some(s => s.type === 'challenge');
+                  const isSelected = selectedDate === date;
+                  const totalSessions = dateSessions.length;
+
+                  return (
+                    <button
+                      key={date}
+                      onClick={() => setSelectedDate(date)}
+                      className={`
+                        relative p-2 sm:p-3 rounded-lg border-2 transition-all text-left
+                        ${isSelected
+                          ? `${mesociclo.borderColor} bg-white shadow-lg ring-2 ${mesociclo.borderColor}`
+                          : 'border-gray-200 bg-white/60 hover:bg-white hover:border-gray-300 hover:shadow-md'}
+                      `}
+                    >
+                      {isSelected && (
+                        <div className={`absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full ${mesociclo.bgColor} ${mesociclo.borderColor} border-2 flex items-center justify-center`}>
+                          <span className="text-[10px]">✓</span>
                         </div>
-                      </div>
-                      <div className="flex gap-3 sm:gap-6 text-xs sm:text-sm">
-                        <div className="text-center">
-                          <p className="text-gray-600 text-[10px] sm:text-sm">Entrenos</p>
-                          <p className="font-bold text-xs sm:text-base">{weekWorkouts.length}</p>
-                        </div>
-                        {weekChallenge && (
-                          <div className="text-center">
-                            <p className="text-gray-600 text-[10px] sm:text-sm">Desafío</p>
-                            <p className="font-bold text-xs sm:text-base">1</p>
-                          </div>
-                        )}
-                        <div className="text-center">
-                          <p className="text-gray-600 text-[10px] sm:text-sm">Distancia</p>
-                          <p className="font-bold text-xs sm:text-base">{(weekDistance / 1000).toFixed(1)}km</p>
-                        </div>
-                      </div>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <div className="flex overflow-x-auto gap-4 md:gap-6 pt-6 pb-4 px-2 snap-x snap-mandatory scrollbar-thin">
-                      {weekSessions.map((session, index) => (
-                        <div key={`${weekNumber}-${index}`} className="flex-shrink-0 w-[85vw] sm:w-[400px] md:w-[450px] snap-start">
-                          {session.type === 'workout' ? (
-                            <WorkoutCard {...session} />
-                          ) : (
-                            <ChallengeCard {...session} />
+                      )}
+                      <div className="space-y-1">
+                        <p className="text-xs sm:text-sm font-bold text-gray-900 line-clamp-1">{date}</p>
+                        <p className="text-[10px] sm:text-xs text-gray-600">{dateSessions[0]?.day}</p>
+                        <div className="flex items-center gap-1.5 mt-1.5">
+                          {hasWorkouts && (
+                            <div className="flex items-center gap-0.5">
+                              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-500 rounded-full"></div>
+                              <span className="text-[9px] sm:text-[10px] text-blue-600 font-medium">
+                                {dateSessions.filter(s => s.type === 'workout').length}
+                              </span>
+                            </div>
+                          )}
+                          {hasChallenges && (
+                            <div className="flex items-center gap-0.5">
+                              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-orange-500 rounded-full"></div>
+                              <span className="text-[9px] sm:text-[10px] text-orange-600 font-medium">
+                                {dateSessions.filter(s => s.type === 'challenge').length}
+                              </span>
+                            </div>
                           )}
                         </div>
-                      ))}
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              );
-            })}
-        </Accordion>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Entrenamientos de la fecha seleccionada */}
+          {selectedDate && sessionsByDate[selectedDate] && (
+            <div className="space-y-4">
+              <h3 className="text-sm sm:text-base font-bold text-gray-900">
+                Entrenamientos del {selectedDate}
+              </h3>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {sessionsByDate[selectedDate].map((session, index) => (
+                  <div key={`${selectedDate}-${index}`}>
+                    {session.type === 'workout' ? (
+                      <WorkoutCard {...session} />
+                    ) : (
+                      <ChallengeCard {...session} />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Mensaje si no hay fecha seleccionada */}
+          {!selectedDate && sortedDates.length === 0 && (
+            <p className="text-center text-gray-500 py-8">No hay entrenamientos en este bloque</p>
+          )}
+        </div>
       </DialogContent>
     </Dialog>
   );

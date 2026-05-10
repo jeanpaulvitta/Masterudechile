@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
@@ -53,6 +54,7 @@ interface AttendanceManagerProps {
 
 export function AttendanceManager({ swimmers, sessions }: AttendanceManagerProps) {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSession, setSelectedSession] = useState<string>("");
@@ -73,23 +75,30 @@ export function AttendanceManager({ swimmers, sessions }: AttendanceManagerProps
   const loadAttendance = async () => {
     try {
       setLoading(true);
-      const records = await api.fetchAttendance();
-      // Mapear los registros de la API al formato del componente
-      // Filtrar registros que no tengan los campos requeridos
+      // fetchQuery usa el caché de React Query (staleTime 5 min).
+      // Si otro componente ya cargó attendance, este remount NO genera un nuevo request.
+      const records = await queryClient.fetchQuery({
+        queryKey: ['attendance'],
+        queryFn: api.fetchAttendance,
+        staleTime: 1000 * 60 * 5,
+        gcTime: 1000 * 60 * 30,
+      });
       const mappedRecords: AttendanceRecord[] = records
         .filter(record => record && record.id && record.swimmerId && record.sessionId)
         .map(record => ({
           id: record.id,
           sessionId: record.sessionId,
           sessionDate: record.date,
-          sessionType: "workout" as const, // Por defecto, se puede mejorar
+          sessionType: "workout" as const,
           swimmerId: record.swimmerId,
-          status: record.status === "present" ? "presente" : record.status === "absent" ? "ausente" : "justificado",
+          status: record.status === "present" ? "presente" as const
+                : record.status === "absent"  ? "ausente"  as const
+                : "justificado" as const,
           notes: record.notes,
           timestamp: Date.now()
         }));
       setAttendanceRecords(mappedRecords);
-      console.log("✅ Asistencias cargadas desde Supabase:", mappedRecords);
+      console.log("✅ Asistencias cargadas:", mappedRecords.length);
     } catch (error) {
       console.error("❌ Error cargando asistencias:", error);
     } finally {
@@ -119,6 +128,7 @@ export function AttendanceManager({ swimmers, sessions }: AttendanceManagerProps
       console.log("📋 Current attendance records:", attendanceRecords.map(r => ({ id: r.id, swimmer: r.swimmerId })));
       
       await api.deleteAttendanceRecord(recordId);
+      queryClient.invalidateQueries({ queryKey: ['attendance'] });
       setAttendanceRecords(attendanceRecords.filter(r => r.id !== recordId));
       console.log("✅ Registro de asistencia eliminado");
     } catch (error: any) {
@@ -172,7 +182,7 @@ export function AttendanceManager({ swimmers, sessions }: AttendanceManagerProps
         const existingRecord = attendanceRecords[existingIndex];
         try {
           updatedRecord = await api.updateAttendanceRecord(existingRecord.id, recordData);
-          
+          queryClient.invalidateQueries({ queryKey: ['attendance'] });
           const newRecords = [...attendanceRecords];
           newRecords[existingIndex] = {
             ...existingRecord,
@@ -187,7 +197,7 @@ export function AttendanceManager({ swimmers, sessions }: AttendanceManagerProps
           if (updateError.message?.includes('not found') || updateError.message?.includes('Attendance record not found')) {
             console.log('⚠️ Registro no encontrado, creando uno nuevo...');
             updatedRecord = await api.addAttendanceRecord(recordData);
-            
+            queryClient.invalidateQueries({ queryKey: ['attendance'] });
             const newRecords = [...attendanceRecords];
             newRecords[existingIndex] = {
               id: updatedRecord.id,
@@ -208,7 +218,7 @@ export function AttendanceManager({ swimmers, sessions }: AttendanceManagerProps
       } else {
         // Crear nuevo registro
         const apiRecord = await api.addAttendanceRecord(recordData);
-
+        queryClient.invalidateQueries({ queryKey: ['attendance'] });
         const newRecord: AttendanceRecord = {
           id: apiRecord.id,
           sessionId: selectedSession,

@@ -12,6 +12,37 @@ const headers = {
   'Authorization': `Bearer ${publicAnonKey}`,
 };
 
+// ==================== CACHÉ DE NIVEL MÓDULO ====================
+// Evita re-fetches innecesarios entre remounts de componentes.
+// Comparte la misma respuesta con App.tsx (loadData) y React Query hooks.
+const _cache = new Map<string, { data: unknown; expiresAt: number }>();
+
+function cacheGet<T>(key: string): T | null {
+  const entry = _cache.get(key);
+  if (entry && Date.now() < entry.expiresAt) return entry.data as T;
+  _cache.delete(key);
+  return null;
+}
+
+function cacheSet(key: string, data: unknown, ttlMs: number): void {
+  _cache.set(key, { data, expiresAt: Date.now() + ttlMs });
+}
+
+export function cacheInvalidate(...keys: string[]): void {
+  keys.forEach(k => _cache.delete(k));
+}
+
+const CACHE_TTL = {
+  workouts:    10 * 60 * 1000,  // 10 min
+  attendance:   5 * 60 * 1000,  //  5 min
+  swimmers:    10 * 60 * 1000,  // 10 min
+  competitions: 15 * 60 * 1000, // 15 min
+  challenges:  10 * 60 * 1000,  // 10 min
+  holidays:    60 * 60 * 1000,  //  1 hora
+  testControls: 5 * 60 * 1000,  //  5 min
+  testResults:  5 * 60 * 1000,  //  5 min
+} as const;
+
 // Helper function to add timeout to fetch requests
 async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout: number = 10000): Promise<Response> {
   const controller = new AbortController();
@@ -36,6 +67,8 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeout:
 // ==================== SWIMMERS API ====================
 
 export async function fetchSwimmers(): Promise<Swimmer[]> {
+  const cached = cacheGet<Swimmer[]>('swimmers');
+  if (cached) return cached;
   try {
     const response = await fetch(`${API_BASE_URL}/swimmers`, { headers });
     if (!response.ok) {
@@ -43,7 +76,8 @@ export async function fetchSwimmers(): Promise<Swimmer[]> {
       throw new Error(`Failed to fetch swimmers: ${error.error || response.statusText}`);
     }
     const data = await response.json();
-    console.log('✅ Swimmers fetched from server:', data.swimmers);
+    console.log('✅ Swimmers fetched from server:', data.swimmers?.length ?? 0);
+    cacheSet('swimmers', data.swimmers, CACHE_TTL.swimmers);
     return data.swimmers;
   } catch (error) {
     console.error('❌ Error fetching swimmers:', error);
@@ -64,6 +98,7 @@ export async function addSwimmer(swimmer: Omit<Swimmer, 'id'>): Promise<Swimmer>
     }
     const data = await response.json();
     console.log('✅ Swimmer added:', data.swimmer);
+    cacheInvalidate('swimmers');
     return data.swimmer;
   } catch (error) {
     console.error('❌ Error adding swimmer:', error);
@@ -99,6 +134,7 @@ export async function updateSwimmer(id: string, swimmer: Omit<Swimmer, 'id'>): P
       hasPersonalBestsHistory: !!data.swimmer.personalBestsHistory,
       historyCount: data.swimmer.personalBestsHistory?.length || 0
     });
+    cacheInvalidate('swimmers');
     return data.swimmer;
   } catch (error) {
     console.error('❌ API: Error updating swimmer:', error);
@@ -116,6 +152,7 @@ export async function deleteSwimmer(id: string): Promise<void> {
       const error = await response.json();
       throw new Error(`Failed to delete swimmer: ${error.error || response.statusText}`);
     }
+    cacheInvalidate('swimmers');
     console.log('✅ Swimmer deleted:', id);
   } catch (error) {
     console.error('❌ Error deleting swimmer:', error);
@@ -145,8 +182,13 @@ interface FetchAttendanceParams {
 }
 
 export async function fetchAttendance(params?: FetchAttendanceParams): Promise<AttendanceRecord[]> {
+  // Cache solo cuando se pide todo (sin filtros), que es el caso más frecuente
+  const noParams = !params?.swimmerId && !params?.startDate && !params?.endDate && !params?.limit;
+  if (noParams) {
+    const cached = cacheGet<AttendanceRecord[]>('attendance');
+    if (cached) return cached;
+  }
   try {
-    // Construir query params
     const url = new URL(`${API_BASE_URL}/attendance`);
     if (params?.swimmerId) url.searchParams.append('swimmerId', params.swimmerId);
     if (params?.startDate) url.searchParams.append('startDate', params.startDate);
@@ -160,6 +202,7 @@ export async function fetchAttendance(params?: FetchAttendanceParams): Promise<A
     }
     const data = await response.json();
     console.log('✅ Attendance fetched from server:', data.attendance?.length || 0);
+    if (noParams) cacheSet('attendance', data.attendance, CACHE_TTL.attendance);
     return data.attendance;
   } catch (error) {
     console.error('❌ Error fetching attendance:', error);
@@ -180,6 +223,7 @@ export async function addAttendanceRecord(record: Omit<AttendanceRecord, 'id'>):
     }
     const data = await response.json();
     console.log('✅ Attendance record added:', data.record);
+    cacheInvalidate('attendance');
     return data.record;
   } catch (error) {
     console.error('❌ Error adding attendance:', error);
@@ -200,6 +244,7 @@ export async function updateAttendanceRecord(id: string, record: Omit<Attendance
     }
     const data = await response.json();
     console.log('✅ Attendance record updated:', data.record);
+    cacheInvalidate('attendance');
     return data.record;
   } catch (error) {
     console.error('❌ Error updating attendance:', error);
@@ -218,6 +263,7 @@ export async function deleteAttendanceRecord(id: string): Promise<void> {
       throw new Error(`Failed to delete attendance: ${error.error || response.statusText}`);
     }
     console.log('✅ Attendance record deleted:', id);
+    cacheInvalidate('attendance');
   } catch (error) {
     console.error('❌ Error deleting attendance:', error);
     throw error;
@@ -227,6 +273,8 @@ export async function deleteAttendanceRecord(id: string): Promise<void> {
 // ==================== COMPETITIONS API ====================
 
 export async function fetchCompetitions(): Promise<Competition[]> {
+  const cached = cacheGet<Competition[]>('competitions');
+  if (cached) return cached;
   try {
     const response = await fetch(`${API_BASE_URL}/competitions`, { headers });
     if (!response.ok) {
@@ -234,7 +282,8 @@ export async function fetchCompetitions(): Promise<Competition[]> {
       throw new Error(`Failed to fetch competitions: ${error.error || response.statusText}`);
     }
     const data = await response.json();
-    console.log('✅ Competitions fetched from server:', data.competitions);
+    console.log('✅ Competitions fetched from server:', data.competitions?.length ?? 0);
+    cacheSet('competitions', data.competitions, CACHE_TTL.competitions);
     return data.competitions;
   } catch (error) {
     console.error('❌ Error fetching competitions:', error);
@@ -302,6 +351,8 @@ export async function deleteCompetition(id: string): Promise<void> {
 // ==================== SWIMMER COMPETITIONS API ====================
 
 export async function fetchSwimmerCompetitions(): Promise<SwimmerCompetition[]> {
+  const cached = cacheGet<SwimmerCompetition[]>('swimmer-competitions');
+  if (cached) return cached;
   try {
     const response = await fetch(`${API_BASE_URL}/swimmer-competitions`, { headers });
     if (!response.ok) {
@@ -309,7 +360,8 @@ export async function fetchSwimmerCompetitions(): Promise<SwimmerCompetition[]> 
       throw new Error(`Failed to fetch swimmer competitions: ${error.error || response.statusText}`);
     }
     const data = await response.json();
-    console.log('✅ Swimmer competitions fetched from server:', data.participations);
+    console.log('✅ Swimmer competitions fetched from server:', data.participations?.length ?? 0);
+    cacheSet('swimmer-competitions', data.participations, CACHE_TTL.competitions);
     return data.participations;
   } catch (error) {
     console.error('❌ Error fetching swimmer competitions:', error);
@@ -409,10 +461,13 @@ interface FetchWorkoutsParams {
 }
 
 export async function fetchWorkouts(params?: FetchWorkoutsParams): Promise<Workout[]> {
+  // Cache solo cuando se pide todo (sin filtros), compartido con React Query y loadData()
+  const noParams = !params?.startDate && !params?.endDate && !params?.limit;
+  if (noParams) {
+    const cached = cacheGet<Workout[]>('workouts');
+    if (cached) return cached;
+  }
   try {
-    // Construir query params para filtrar en el cliente
-    // NOTA: El servidor actual no soporta filtros, pero los agregamos aquí
-    // para reducir el procesamiento del cliente con caché de React Query
     const url = new URL(`${API_BASE_URL}/workouts`);
     if (params?.startDate) url.searchParams.append('startDate', params.startDate);
     if (params?.endDate) url.searchParams.append('endDate', params.endDate);
@@ -425,6 +480,7 @@ export async function fetchWorkouts(params?: FetchWorkoutsParams): Promise<Worko
     }
     const data = await response.json();
     console.log('✅ Workouts fetched from server:', data.workouts?.length || 0);
+    if (noParams) cacheSet('workouts', data.workouts, CACHE_TTL.workouts);
     return data.workouts;
   } catch (error) {
     console.error('❌ Error fetching workouts:', error);
@@ -445,6 +501,7 @@ export async function addWorkout(workout: Omit<Workout, 'id'>): Promise<Workout>
     }
     const data = await response.json();
     console.log('✅ Workout added:', data.workout);
+    cacheInvalidate('workouts');
     return data.workout;
   } catch (error) {
     console.error('❌ Error adding workout:', error);
@@ -465,6 +522,7 @@ export async function updateWorkout(id: string, workout: Omit<Workout, 'id'>): P
     }
     const data = await response.json();
     console.log('✅ Workout updated:', data.workout);
+    cacheInvalidate('workouts');
     return data.workout;
   } catch (error) {
     console.error('❌ Error updating workout:', error);
@@ -495,6 +553,7 @@ export async function deleteWorkout(id: string): Promise<void> {
       throw new Error(`Failed to delete workout: ${errorJson.error || response.statusText}`);
     }
     
+    cacheInvalidate('workouts');
     console.log('✅ Client: Workout deleted successfully:', id);
   } catch (error) {
     // Enhanced error logging
@@ -523,6 +582,7 @@ export async function clearAllWorkouts(): Promise<void> {
       const error = await response.json();
       throw new Error(`Failed to clear all workouts: ${error.error || response.statusText}`);
     }
+    cacheInvalidate('workouts');
     console.log('✅ All workouts cleared from database');
   } catch (error) {
     console.error('❌ Error clearing all workouts:', error);
@@ -533,23 +593,25 @@ export async function clearAllWorkouts(): Promise<void> {
 // ==================== CHALLENGES API ====================
 
 export async function fetchChallenges(): Promise<Challenge[]> {
+  const cached = cacheGet<Challenge[]>('challenges');
+  if (cached) return cached;
   try {
-    const response = await fetch(`${API_BASE_URL}/challenges`, { 
+    const response = await fetch(`${API_BASE_URL}/challenges`, {
       headers,
-      signal: AbortSignal.timeout(15000) // Timeout de 15 segundos
+      signal: AbortSignal.timeout(15000),
     });
-    
+
     if (!response.ok) {
       console.warn(`⚠️ Challenges endpoint returned ${response.status}, returning empty array`);
       return [];
     }
-    
+
     const data = await response.json();
     const challenges = Array.isArray(data.challenges) ? data.challenges : [];
     console.log('✅ Challenges fetched from server:', challenges.length);
+    cacheSet('challenges', challenges, CACHE_TTL.challenges);
     return challenges;
   } catch (error) {
-    // No lanzar error, solo advertir y devolver array vacío
     console.warn('⚠️ Could not fetch challenges (returning empty array):', error instanceof Error ? error.message : 'Unknown error');
     return [];
   }
@@ -615,23 +677,25 @@ export async function deleteChallenge(id: string): Promise<void> {
 // ==================== HOLIDAYS API ====================
 
 export async function fetchHolidays(): Promise<Holiday[]> {
+  const cached = cacheGet<Holiday[]>('holidays');
+  if (cached) return cached;
   try {
-    const response = await fetch(`${API_BASE_URL}/holidays`, { 
+    const response = await fetch(`${API_BASE_URL}/holidays`, {
       headers,
-      signal: AbortSignal.timeout(15000) // Timeout de 15 segundos
+      signal: AbortSignal.timeout(15000),
     });
-    
+
     if (!response.ok) {
       console.warn(`⚠️ Holidays endpoint returned ${response.status}, returning empty array`);
       return [];
     }
-    
+
     const data = await response.json();
     const holidays = Array.isArray(data.holidays) ? data.holidays : [];
     console.log('✅ Holidays fetched from server:', holidays.length);
+    cacheSet('holidays', holidays, CACHE_TTL.holidays);
     return holidays;
   } catch (error) {
-    // No lanzar error, solo advertir y devolver array vacío
     console.warn('⚠️ Could not fetch holidays (returning empty array):', error instanceof Error ? error.message : 'Unknown error');
     return [];
   }
@@ -697,6 +761,8 @@ export async function deleteHoliday(id: string): Promise<void> {
 // ==================== TEST CONTROL API ====================
 
 export async function fetchTestControls(): Promise<TestControl[]> {
+  const cached = cacheGet<TestControl[]>('testControls');
+  if (cached) return cached;
   try {
     const response = await fetchWithTimeout(`${API_BASE_URL}/test-controls`, { headers }, 15000);
     if (!response.ok) {
@@ -706,10 +772,11 @@ export async function fetchTestControls(): Promise<TestControl[]> {
     }
     const data = await response.json();
     console.log('✅ Test controls fetched:', data.testControls?.length || 0);
-    return data.testControls || [];
+    const result = data.testControls || [];
+    cacheSet('testControls', result, CACHE_TTL.testControls);
+    return result;
   } catch (error) {
     console.error('❌ Error fetching test controls:', error);
-    // En lugar de lanzar el error, retornar array vacío para no bloquear la carga
     return [];
   }
 }
@@ -779,16 +846,20 @@ export async function deleteTestControl(id: string): Promise<void> {
 // ==================== TEST RESULTS API ====================
 
 export async function fetchTestResults(): Promise<TestResult[]> {
+  const cached = cacheGet<TestResult[]>('testResults');
+  if (cached) return cached;
   try {
-    const response = await fetchWithTimeout(`${API_BASE_URL}/test-results`, { headers }, 20000); // Aumentar timeout a 20s
+    const response = await fetchWithTimeout(`${API_BASE_URL}/test-results`, { headers }, 20000);
     if (!response.ok) {
       const errorText = await response.text();
       console.warn('⚠️ Test results fetch error (returning empty array):', errorText);
-      return []; // Return empty instead of throwing
+      return [];
     }
     const data = await response.json();
     console.log('✅ Test results fetched:', data.testResults?.length || 0);
-    return data.testResults || [];
+    const result = data.testResults || [];
+    cacheSet('testResults', result, CACHE_TTL.testResults);
+    return result;
   } catch (error) {
     // Silently handle timeout errors - just log warning and return empty array
     if (error instanceof Error && error.message.includes('timeout')) {

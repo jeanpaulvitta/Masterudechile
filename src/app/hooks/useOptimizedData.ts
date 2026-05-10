@@ -50,28 +50,26 @@ export function useDeleteSwimmer() {
 // ==================== WORKOUTS ====================
 
 interface WorkoutsQueryParams {
-  startDate?: string; // Filtro por fecha de inicio
-  endDate?: string;   // Filtro por fecha de fin
+  startDate?: string;
+  endDate?: string;
 }
 
 export function useWorkouts(params?: WorkoutsQueryParams) {
   return useQuery({
-    queryKey: ['workouts', params],
-    queryFn: async () => {
-      const allWorkouts = await api.fetchWorkouts();
-
-      // Filtrar por fechas si se proporcionan
-      if (params?.startDate || params?.endDate) {
-        return allWorkouts.filter((workout) => {
-          if (params.startDate && workout.date < params.startDate) return false;
-          if (params.endDate && workout.date > params.endDate) return false;
-          return true;
-        });
-      }
-
-      return allWorkouts;
+    // Clave estática: todos los componentes comparten UN solo request y entrada en caché,
+    // independientemente del rango de fechas solicitado.
+    queryKey: ['workouts'],
+    queryFn: api.fetchWorkouts,
+    staleTime: 1000 * 60 * 10, // 10 minutos
+    gcTime: 1000 * 60 * 60,    // 1 hora en memoria
+    select: (data: Workout[]) => {
+      if (!params?.startDate && !params?.endDate) return data;
+      return data.filter((workout) => {
+        if (params.startDate && workout.date < params.startDate) return false;
+        if (params.endDate && workout.date > params.endDate) return false;
+        return true;
+      });
     },
-    staleTime: 1000 * 60 * 5, // 5 minutos - se actualizan con moderación
   });
 }
 
@@ -116,19 +114,19 @@ interface AttendanceQueryParams {
 
 export function useAttendance(params?: AttendanceQueryParams) {
   return useQuery({
-    queryKey: ['attendance', params],
-    queryFn: async () => {
-      const allRecords = await api.fetchAttendance();
-
-      // Filtrar por parámetros
-      return allRecords.filter((record) => {
+    // Clave estática: todos los componentes comparten UN solo request y entrada en caché.
+    // La función select filtra en memoria sin generar nuevos requests de red.
+    queryKey: ['attendance'],
+    queryFn: api.fetchAttendance,
+    staleTime: 1000 * 60 * 5,  // 5 minutos
+    gcTime: 1000 * 60 * 30,    // 30 minutos en memoria
+    select: (data: AttendanceRecord[]) =>
+      data.filter((record) => {
         if (params?.swimmerId && record.swimmerId !== params.swimmerId) return false;
         if (params?.startDate && record.date < params.startDate) return false;
         if (params?.endDate && record.date > params.endDate) return false;
         return true;
-      });
-    },
-    staleTime: 1000 * 60 * 3, // 3 minutos - cambia con frecuencia
+      }),
   });
 }
 

@@ -326,22 +326,31 @@ app.delete("/make-server-000a47d9/swimmers/:id", async (c) => {
 
 // ==================== ATTENDANCE ROUTES ====================
 
-// Get all attendance records
+// Get attendance records (supports ?swimmerId=X&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD)
 app.get("/make-server-000a47d9/attendance", async (c) => {
   try {
+    const filterSwimmerId = c.req.query('swimmerId');
+    const startDate       = c.req.query('startDate');
+    const endDate         = c.req.query('endDate');
+
     const recordsPromise = kv.getByPrefix("attendance:");
     const records = await withTimeout(
       recordsPromise,
       30000,
       'Timeout fetching attendance records'
     );
-    
-    const attendanceList = records
+
+    let attendanceList = records
       ? records
           .filter((item: any) => item.key !== "attendance:list")
           .map((item: any) => item.value)
-          .filter((record: any) => record && record.id && record.swimmerId && record.sessionId) // Filtrar registros inválidos
+          .filter((record: any) => record && record.id && record.swimmerId && record.sessionId)
       : [];
+
+    if (filterSwimmerId) attendanceList = attendanceList.filter((r: any) => r.swimmerId === filterSwimmerId);
+    if (startDate)       attendanceList = attendanceList.filter((r: any) => r.date >= startDate);
+    if (endDate)         attendanceList = attendanceList.filter((r: any) => r.date <= endDate);
+
     return c.json({ attendance: attendanceList });
   } catch (error) {
     console.error("Error fetching attendance:", error);
@@ -458,13 +467,19 @@ app.get("/make-server-000a47d9/competitions", async (c) => {
 
 // ==================== WORKOUTS ROUTES ====================
 
-// Get all workouts
+// Get all workouts (supports ?startDate=YYYY-MM-DD&endDate=YYYY-MM-DD)
 app.get("/make-server-000a47d9/workouts", async (c) => {
   try {
+    const startDate = c.req.query('startDate');
+    const endDate   = c.req.query('endDate');
+
     const workoutsPromise = kv.get("workouts:list");
     const workouts = await withTimeout(workoutsPromise, 30000, 'Timeout fetching workouts');
-    // Filtrar solo los no eliminados por defecto
-    const activeWorkouts = (workouts || []).filter((w: any) => !w.deleted);
+
+    let activeWorkouts = (workouts || []).filter((w: any) => !w.deleted);
+    if (startDate) activeWorkouts = activeWorkouts.filter((w: any) => w.date >= startDate);
+    if (endDate)   activeWorkouts = activeWorkouts.filter((w: any) => w.date <= endDate);
+
     return c.json({ workouts: activeWorkouts });
   } catch (error) {
     console.error("Error fetching workouts:", error);

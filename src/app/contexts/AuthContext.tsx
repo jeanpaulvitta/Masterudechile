@@ -30,117 +30,105 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    console.log('🔧 AuthProvider: Initializing...');
-    
-    // Inicializar inmediatamente en caso de error
-    const initAuth = async () => {
-      try {
-        await checkSession();
-      } catch (error) {
-        console.error('❌ Error during init:', error);
-        setLoading(false);
-      }
+  const buildUserFromMetadata = (authUser: any): User => {
+    const { name, role, swimmerId } = authUser.user_metadata || {};
+    return {
+      id: authUser.id,
+      email: authUser.email!,
+      name: name || authUser.email!,
+      role: role || 'swimmer',
+      swimmerId,
     };
-    
-    initAuth();
-    
-    // Escuchar cambios en la autenticación
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔔 Auth state changed:', event);
-      
-      if (event === 'SIGNED_IN' && session?.user) {
-        // Usuario inició sesión - actualizar estado con datos del usuario
-        await updateUserState(session.user);
-      } else if (event === 'SIGNED_OUT') {
-        // Usuario cerró sesión
-        setUser(null);
-      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-        // Token renovado - actualizar usuario
-        await updateUserState(session.user);
-      }
-      
-      setLoading(false);
-    });
-    
-    // Cleanup al desmontar
-    return () => {
-      console.log('🔧 AuthProvider: Cleaning up...');
-      authListener.subscription.unsubscribe();
-    };
-  }, []);
+  };
 
-  // Helper para actualizar el estado del usuario desde Supabase User
-  const updateUserState = async (authUser: any) => {
+  // Resuelve el swimmerId para usuarios tipo 'swimmer' que no lo tienen en metadata.
+  // Solo se llama una vez en SIGNED_IN, no en cada token refresh.
+  const resolveSwimmerId = async (authUser: any): Promise<string | undefined> => {
+    const { swimmerId } = authUser.user_metadata || {};
+    if (swimmerId) return swimmerId;
     try {
-      const { name, role, swimmerId } = authUser.user_metadata || {};
-      
-      // Si es nadador, verificar/obtener swimmerId
-      let finalSwimmerId = swimmerId;
-      if (role === 'swimmer') {
-        try {
-          const swimmerResponse = await fetch(`${API_URL}/swimmers`, {
-            headers: { 'Authorization': `Bearer ${publicAnonKey}` }
-          });
-          if (swimmerResponse.ok) {
-            const data = await swimmerResponse.json();
-            const swimmer = data.swimmers?.find((s: any) => s.email === authUser.email);
-            if (swimmer) {
-              finalSwimmerId = swimmer.id;
-            }
-          }
-        } catch (error) {
-          console.error('Error fetching swimmer:', error);
-        }
-      }
-      
-      setUser({
-        id: authUser.id,
-        email: authUser.email!,
-        name: name || authUser.email!,
-        role: role || 'swimmer',
-        swimmerId: finalSwimmerId,
+      const res = await fetch(`${API_URL}/swimmers`, {
+        headers: { 'Authorization': `Bearer ${publicAnonKey}` }
       });
-    } catch (error) {
-      console.error('Error updating user state:', error);
-      setLoading(false);
+      if (!res.ok) return undefined;
+      const data = await res.json();
+      return data.swimmers?.find((s: any) => s.email === authUser.email)?.id;
+    } catch {
+      return undefined;
     }
   };
 
-  const checkSession = async () => {
-    try {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (error) {
-        console.error('Error checking session:', error);
+  useEffect(() => {
+    let initialized = false;
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'INITIAL_SESSION') {
+        // Primera carga — tomamos la sesión del listener en lugar de llamar getSession()
+        // para evitar la race condition con checkSession.
+        initialized = true;
+        if (session?.user) {
+          const baseUser = buildUserFromMetadata(session.user);
+          setUser(baseUser);
+          // Si es nadador sin swimmerId, buscarlo en background sin bloquear la UI
+          if (baseUser.role === 'swimmer' && !baseUser.swimmerId) {
+            resolveSwimmerId(session.user).then(id => {
+              if (id) setUser(u => u ? { ...u, swimmerId: id } : u);
+            });
+          }
+        }
         setLoading(false);
         return;
       }
-      
-      if (session?.user) {
-        console.log('✅ Session found for:', session.user.email);
-        await updateUserState(session.user);
-      } else {
-        console.log('No active session found');
+
+      if (event === 'SIGNED_IN' && session?.user) {
+        const baseUser = buildUserFromMetadata(session.user);
+        if (baseUser.role === 'swimmer' && !baseUser.swimmerId) {
+          const id = await resolveSwimmerId(session.user);
+          setUser({ ...baseUser, swimmerId: id });
+        } else {
+          setUser(baseUser);
+        }
+        setLoading(false);
+        return;
       }
-    } catch (error) {
-      console.error('Error checking session:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+
+      if (event === 'TOKEN_REFRESHED' && session?.user) {
+        // Solo actualizar metadata, no volver a fetchear nadadores
+        setUser(prev => prev ? { ...prev, ...buildUserFromMetadata(session.user) } : null);
+        return;
+      }
+
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setLoading(false);
+      }
+    });
+
+    // Fallback: si onAuthStateChange no dispara INITIAL_SESSION en 3s
+    const fallback = setTimeout(async () => {
+      if (!initialized) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            setUser(buildUserFromMetadata(session.user));
+          }
+        } catch {}
+        setLoading(false);
+      }
+    }, 3000);
+
+    return () => {
+      authListener.subscription.unsubscribe();
+      clearTimeout(fallback);
+    };
+  }, []);
 
   const login = async (email: string, password: string) => {
     try {
-      setLoading(true);
-      const userData = await authApi.login(email, password);
-      setUser(userData);
-      // No necesitamos saveSession porque Supabase Auth lo maneja automáticamente
+      await authApi.login(email, password);
+      // onAuthStateChange(SIGNED_IN) actualizará el usuario automáticamente
     } catch (error) {
-      console.error('Login error:', error);
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 

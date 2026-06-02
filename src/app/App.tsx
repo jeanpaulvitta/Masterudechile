@@ -4,7 +4,7 @@ import { syncWorkoutsFromLocal } from "./handlers/syncWorkouts";
 import { isTeamRecord } from "./utils/recordsUtils";
 import { workouts2026_2027 } from "./data/workouts2026-2027";
 import { calculateAge, calculateMasterCategory } from "./utils/swimmerUtils";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import { QueryProvider } from "./contexts/QueryProvider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
@@ -40,6 +40,7 @@ import { UserManager } from "./components/UserManager";
 import { LogoConfig } from "./components/LogoConfig";
 import { PWAInstallPrompt } from "./components/PWAInstallPrompt";
 import { Toaster } from "./components/ui/sonner";
+import { toast } from "sonner";
 import { ResponsiveTabsNav } from "./components/ResponsiveTabsNav";
 import type { Swimmer, Competition, SwimmerCompetition, PersonalBest, PersonalBestHistory, AttendanceRecord, SwimmerGoal } from "./data/swimmers";
 import type { Workout } from "./data/workouts";
@@ -52,7 +53,6 @@ import { generateAllSwimmersPDF } from "./utils/pdfGenerator";
 import { syncFebruaryWorkouts } from "./handlers/syncFebruaryWorkouts";
 import { cleanFebruaryWorkouts } from "./handlers/cleanFebruaryWorkouts";
 
-// Función auxiliar para convertir tiempo MM:SS.SS a segundos
 function timeToSeconds(time: string): number {
   const parts = time.split(':');
   if (parts.length === 2) {
@@ -63,23 +63,80 @@ function timeToSeconds(time: string): number {
   return parseFloat(time);
 }
 
-function MainApp() {
-  const { user } = useAuth(); // Obtener usuario autenticado
-  
-  // 🔍 DEBUG: Verificar entrenamientos del archivo local
-  console.log('📅 VERIFICACIÓN ARCHIVO LOCAL:');
-  console.log(`  Total entrenamientos en archivo: ${defaultWorkouts.length}`);
-  const agostoWorkouts = defaultWorkouts.filter(w => w.date.toLowerCase().includes('agosto'));
-  console.log(`  🔍 Entrenamientos de AGOSTO en archivo: ${agostoWorkouts.length}`);
-  if (agostoWorkouts.length > 0) {
-    console.log(`  📋 Ejemplos AGOSTO:`, agostoWorkouts.slice(0, 5).map(w => ({
-      week: w.week,
-      date: w.date,
-      day: w.day,
-      schedule: w.schedule
-    })));
+function parseDateToISO(dateText: string, week: number): string {
+  const isoFormatRegex = /(\d{1,2})-(\w+)-(\d{4})/;
+  const isoMatch = dateText.match(isoFormatRegex);
+
+  if (isoMatch) {
+    const day = parseInt(isoMatch[1]);
+    const monthAbbr = isoMatch[2].toLowerCase();
+    const year = parseInt(isoMatch[3]);
+
+    const monthAbbrMap: { [key: string]: number } = {
+      'ene': 0, 'jan': 0, 'enero': 0, 'january': 0,
+      'feb': 1, 'febrero': 1, 'february': 1,
+      'mar': 2, 'marzo': 2, 'march': 2,
+      'abr': 3, 'apr': 3, 'abril': 3, 'april': 3,
+      'may': 4, 'mayo': 4,
+      'jun': 5, 'junio': 5, 'june': 5,
+      'jul': 6, 'julio': 6, 'july': 6,
+      'ago': 7, 'aug': 7, 'agosto': 7, 'august': 7,
+      'sep': 8, 'septiembre': 8, 'september': 8,
+      'oct': 9, 'octubre': 9, 'october': 9,
+      'nov': 10, 'noviembre': 10, 'november': 10,
+      'dic': 11, 'dec': 11, 'diciembre': 11, 'december': 11
+    };
+
+    const month = monthAbbrMap[monthAbbr];
+    if (month !== undefined) {
+      const date = new Date(year, month, day);
+      return date.toISOString().split('T')[0];
+    }
   }
-  
+
+  const monthMap: { [key: string]: number } = {
+    'enero': 0, 'febrero': 1, 'marzo': 2, 'abril': 3,
+    'mayo': 4, 'junio': 5, 'julio': 6, 'agosto': 7,
+    'septiembre': 8, 'octubre': 9, 'noviembre': 10, 'diciembre': 11
+  };
+
+  const regex = /(\d+)\s+de\s+(\w+)/i;
+  const match = dateText.match(regex);
+
+  if (match) {
+    const day = parseInt(match[1]);
+    const monthName = match[2].toLowerCase();
+    const month = monthMap[monthName];
+
+    if (month !== undefined) {
+      let year = 2026;
+      if (month === 0 || month === 1) {
+        year = 2027;
+      } else if (week >= 44) {
+        year = 2027;
+      }
+      const date = new Date(year, month, day);
+      return date.toISOString().split('T')[0];
+    }
+  }
+
+  const baseDate = new Date(2026, 2, 2);
+  let daysToAdd = (week - 1) * 7;
+  if (dateText.includes("Miércoles") || dateText.includes("miércoles")) {
+    daysToAdd += 2;
+  } else if (dateText.includes("Viernes") || dateText.includes("viernes")) {
+    daysToAdd += 4;
+  } else if (dateText.includes("Sábado") || dateText.includes("sábado")) {
+    daysToAdd += 5;
+  }
+  const resultDate = new Date(baseDate);
+  resultDate.setDate(resultDate.getDate() + daysToAdd);
+  return resultDate.toISOString().split('T')[0];
+}
+
+function MainApp() {
+  const { user } = useAuth();
+
   const [swimmers, setSwimmers] = useState<Swimmer[]>([]);
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [swimmerCompetitions, setSwimmerCompetitions] = useState<SwimmerCompetition[]>([]);
@@ -148,61 +205,29 @@ function MainApp() {
       setCompetitions(competitionsData);
       setSwimmerCompetitions(participationsData);
       
-      // Cargar entrenamientos - usar datos locales si BD está vacía
-      console.log('📊 Entrenamientos cargados desde BD:', workoutsData.length);
       if (workoutsData.length === 0 && workouts2026_2027.length > 0) {
-        console.log('⚠️ BD vacía - cargando y sincronizando entrenamientos desde archivo local (workouts2026-2027.ts)');
-        console.log('📦 Entrenamientos locales:', workouts2026_2027.length);
-        
-        // Sincronizar automáticamente a la base de datos
         try {
-          console.log('🔄 Sincronizando entrenamientos a la base de datos...');
-          
-          // Agregar nuevos entrenamientos
-          const addedWorkouts = [];
-          for (const workout of workouts2026_2027) {
-            const added = await api.addWorkout(workout);
-            addedWorkouts.push(added);
+          // Batch sync: 10 en paralelo para no saturar la API
+          const BATCH_SIZE = 10;
+          const addedWorkouts: Workout[] = [];
+          for (let i = 0; i < workouts2026_2027.length; i += BATCH_SIZE) {
+            const batch = workouts2026_2027.slice(i, i + BATCH_SIZE);
+            const results = await Promise.all(batch.map(w => api.addWorkout(w)));
+            addedWorkouts.push(...results);
           }
-          
-          console.log(`✅ ${addedWorkouts.length} entrenamientos sincronizados a la BD`);
           setWorkouts(addedWorkouts);
         } catch (syncError) {
-          console.error('❌ Error sincronizando entrenamientos:', syncError);
-          // Si falla la sincronización, usar datos locales
+          console.error('Error sincronizando entrenamientos:', syncError);
           setWorkouts(workouts2026_2027 as Workout[]);
         }
       } else {
         setWorkouts(workoutsData);
       }
-      
-      // Cargar desafíos - usar los que vienen de la BD
-      console.log('📊 Desafíos cargados desde BD:', challengesData.length);
-      console.log('📋 Challenge IDs:', challengesData.map(c => ({ id: c.id, week: c.week, name: c.challengeName })));
+
       setChallenges(challengesData);
-      
-      // Cargar días feriados
-      console.log('📊 Días feriados cargados desde BD:', holidaysData.length);
       setHolidays(holidaysData);
-      
-      // Cargar controles de prueba
-      console.log('📊 Controles de prueba cargados desde BD:', testControlsData.length);
       setTestControls(testControlsData);
-      
-      // Cargar resultados de prueba
-      console.log('📊 Resultados de prueba cargados desde BD:', testResultsData.length);
       setTestResults(testResultsData);
-      
-      console.log("✅ Datos cargados desde Supabase:", {
-        swimmers: swimmersData.length,
-        competitions: competitionsData.length,
-        participations: participationsData.length,
-        workouts: workoutsData.length,
-        challenges: challengesData.length,
-        holidays: holidaysData.length,
-        testControls: testControlsData.length,
-        testResults: testResultsData.length,
-      });
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Error desconocido";
       setError(errorMsg);
@@ -219,8 +244,7 @@ function MainApp() {
       setSwimmers([...swimmers, swimmer]);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Error desconocido";
-      alert(`Error al agregar nadador: ${errorMsg}`);
-      console.error("❌ Error al agregar nadador:", err);
+      toast.error(`Error al agregar nadador: ${errorMsg}`);
     }
   };
 
@@ -230,21 +254,18 @@ function MainApp() {
       setSwimmers(swimmers.map(s => s.id === id ? swimmer : s));
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Error desconocido";
-      alert(`Error al actualizar nadador: ${errorMsg}`);
-      console.error("❌ Error al actualizar nadador:", err);
+      toast.error(`Error al actualizar nadador: ${errorMsg}`);
     }
   };
 
   const handleDeleteSwimmer = async (id: string) => {
-    if (confirm("¿Estás seguro de que deseas eliminar este nadador?")) {
-      try {
-        await api.deleteSwimmer(id);
-        setSwimmers(swimmers.filter(s => s.id !== id));
-      } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : "Error desconocido";
-        alert(`Error al eliminar nadador: ${errorMsg}`);
-        console.error("❌ Error al eliminar nadador:", err);
-      }
+    if (!confirm("¿Estás seguro de que deseas eliminar este nadador?")) return;
+    try {
+      await api.deleteSwimmer(id);
+      setSwimmers(swimmers.filter(s => s.id !== id));
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : "Error desconocido";
+      toast.error(`Error al eliminar nadador: ${errorMsg}`);
     }
   };
 
@@ -256,10 +277,6 @@ function MainApp() {
         return;
       }
 
-      console.log(`🏊 Guardando marcas para nadador: ${swimmer.name} (${swimmerId})`);
-      console.log(`📊 Marcas personales a guardar:`, personalBests.length, personalBests);
-      console.log(`📈 Historial a agregar:`, history.length, history);
-
       // Convertir tiempo a segundos para cada entrada del historial
       const processedHistory = history.map(h => ({
         ...h,
@@ -270,38 +287,27 @@ function MainApp() {
       const existingHistory = swimmer.personalBestsHistory || [];
       const updatedHistory = [...existingHistory, ...processedHistory];
 
-      console.log(`📚 Historial existente:`, existingHistory.length);
-      console.log(`📚 Historial actualizado:`, updatedHistory.length);
-
       const updatedSwimmer = { 
         ...swimmer, 
         personalBests,
         personalBestsHistory: updatedHistory
       };
       
-      console.log(`💾 Llamando a api.updateSwimmer con:`, {
-        id: swimmerId,
-        personalBestsCount: updatedSwimmer.personalBests?.length,
-        historyCount: updatedSwimmer.personalBestsHistory?.length
-      });
-      
       await api.updateSwimmer(swimmerId, updatedSwimmer);
-      
-      // Actualizar la lista de nadadores
-      const updatedSwimmers = swimmers.map(s => s.id === swimmerId ? { ...s, personalBests, personalBestsHistory: updatedHistory } : s);
-      setSwimmers(updatedSwimmers);
-      
-      // Actualizar el nadador seleccionado si es el mismo
-      if (selectedSwimmer && selectedSwimmer.id === swimmerId) {
+
+      setSwimmers(swimmers.map(s => s.id === swimmerId
+        ? { ...s, personalBests, personalBestsHistory: updatedHistory }
+        : s
+      ));
+
+      if (selectedSwimmer?.id === swimmerId) {
         setSelectedSwimmer({ ...selectedSwimmer, personalBests, personalBestsHistory: updatedHistory });
       }
-      
-      console.log("✅ Mejores marcas guardadas exitosamente");
-      alert("✅ Mejores marcas guardadas exitosamente");
+
+      toast.success("Mejores marcas guardadas exitosamente");
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Error desconocido";
-      console.error("❌ Error al guardar mejores marcas:", err);
-      alert(`Error al guardar mejores marcas: ${errorMsg}`);
+      toast.error(`Error al guardar mejores marcas: ${errorMsg}`);
     }
   };
 
@@ -315,22 +321,17 @@ function MainApp() {
         goals
       };
       await api.updateSwimmer(swimmerId, updatedSwimmer);
-      
-      // Actualizar la lista de nadadores
-      const updatedSwimmers = swimmers.map(s => s.id === swimmerId ? { ...s, goals } : s);
-      setSwimmers(updatedSwimmers);
-      
-      // Actualizar el nadador seleccionado si es el mismo
-      if (selectedSwimmer && selectedSwimmer.id === swimmerId) {
+
+      setSwimmers(swimmers.map(s => s.id === swimmerId ? { ...s, goals } : s));
+
+      if (selectedSwimmer?.id === swimmerId) {
         setSelectedSwimmer({ ...selectedSwimmer, goals });
       }
-      
-      console.log("✅ Metas actualizadas:", goals);
-      alert("✅ Metas actualizadas exitosamente");
+
+      toast.success("Metas actualizadas exitosamente");
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Error desconocido";
-      alert(`Error al actualizar metas: ${errorMsg}`);
-      console.error("❌ Error al actualizar metas:", err);
+      toast.error(`Error al actualizar metas: ${errorMsg}`);
     }
   };
 
@@ -339,11 +340,8 @@ function MainApp() {
     try {
       const competition = await api.addCompetition(newCompetition);
       setCompetitions([...competitions, competition]);
-      console.log("✅ Competencia agregada:", competition);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Error desconocido";
-      alert(`Error al agregar competencia: ${errorMsg}`);
-      console.error("❌ Error al agregar competencia:", err);
+      toast.error(`Error al agregar competencia: ${err instanceof Error ? err.message : "Error desconocido"}`);
     }
   };
 
@@ -351,11 +349,8 @@ function MainApp() {
     try {
       const competition = await api.updateCompetition(id, updatedCompetition);
       setCompetitions(competitions.map(c => c.id === id ? competition : c));
-      console.log("✅ Competencia actualizada:", competition);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Error desconocido";
-      alert(`Error al actualizar competencia: ${errorMsg}`);
-      console.error("❌ Error al actualizar competencia:", err);
+      toast.error(`Error al actualizar competencia: ${err instanceof Error ? err.message : "Error desconocido"}`);
     }
   };
 
@@ -363,13 +358,9 @@ function MainApp() {
     try {
       await api.deleteCompetition(id);
       setCompetitions(competitions.filter(c => c.id !== id));
-      // También eliminar participaciones relacionadas
       setSwimmerCompetitions(swimmerCompetitions.filter(sc => sc.competitionId !== id));
-      console.log("✅ Competencia eliminada:", id);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Error desconocido";
-      alert(`Error al eliminar competencia: ${errorMsg}`);
-      console.error("❌ Error al eliminar competencia:", err);
+      toast.error(`Error al eliminar competencia: ${err instanceof Error ? err.message : "Error desconocido"}`);
     }
   };
 
@@ -403,14 +394,8 @@ function MainApp() {
         setSwimmerCompetitions([...swimmerCompetitions, created]);
       }
 
-      console.log(`✅ Participación ${participates ? 'marcada' : 'desmarcada'}:`, {
-        swimmerId,
-        competitionId,
-      });
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Error desconocido";
-      alert(`Error al actualizar participación: ${errorMsg}`);
-      console.error("❌ Error al actualizar participación:", err);
+      toast.error(`Error al actualizar participación: ${err instanceof Error ? err.message : "Error desconocido"}`);
     }
   };
 
@@ -420,7 +405,7 @@ function MainApp() {
     events: { event: string; time?: string; position?: number; points?: number }[]
   ) => {
     if (!currentSwimmer) {
-      alert("No se pudo identificar tu perfil de nadador");
+      toast.error("No se pudo identificar tu perfil de nadador");
       return;
     }
 
@@ -450,12 +435,9 @@ function MainApp() {
       );
       setSwimmers(updatedSwimmers);
 
-      alert("✅ Resultados guardados exitosamente. Tus marcas personales se han actualizado automáticamente.");
-      console.log("✅ Resultados de competencia guardados:", result);
+      toast.success("Resultados guardados. Tus marcas personales se han actualizado automáticamente.");
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Error desconocido";
-      alert(`Error al guardar resultados: ${errorMsg}`);
-      console.error("❌ Error al guardar resultados de competencia:", err);
+      toast.error(`Error al guardar resultados: ${err instanceof Error ? err.message : "Error desconocido"}`);
     }
   };
 
@@ -464,11 +446,8 @@ function MainApp() {
     try {
       const newWorkout = await api.addWorkout(workout);
       setWorkouts([...workouts, newWorkout]);
-      console.log("✅ Entrenamiento agregado:", newWorkout);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Error desconocido";
-      alert(`Error al agregar entrenamiento: ${errorMsg}`);
-      console.error("❌ Error al agregar entrenamiento:", err);
+      toast.error(`Error al agregar entrenamiento: ${err instanceof Error ? err.message : "Error desconocido"}`);
     }
   };
 
@@ -476,11 +455,8 @@ function MainApp() {
     try {
       const updated = await api.updateWorkout(id, workout);
       setWorkouts(workouts.map(w => w.id === id ? updated : w));
-      console.log("✅ Entrenamiento actualizado:", updated);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Error desconocido";
-      alert(`Error al actualizar entrenamiento: ${errorMsg}`);
-      console.error("❌ Error al actualizar entrenamiento:", err);
+      toast.error(`Error al actualizar entrenamiento: ${err instanceof Error ? err.message : "Error desconocido"}`);
     }
   };
 
@@ -488,11 +464,8 @@ function MainApp() {
     try {
       await api.deleteWorkout(id);
       setWorkouts(workouts.filter(w => w.id !== id));
-      console.log("✅ Entrenamiento eliminado:", id);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Error desconocido";
-      alert(`Error al eliminar entrenamiento: ${errorMsg}`);
-      console.error("❌ Error al eliminar entrenamiento:", err);
+      toast.error(`Error al eliminar entrenamiento: ${err instanceof Error ? err.message : "Error desconocido"}`);
     }
   };
 
@@ -501,9 +474,6 @@ function MainApp() {
       if (!confirm("¿Estás seguro de eliminar entrenamientos duplicados? Solo se mantendrá 1 entrenamiento por día.")) {
         return;
       }
-
-      console.log("🧹 Iniciando limpieza de entrenamientos duplicados...");
-      console.log(`📊 Total entrenamientos antes: ${workouts.length}`);
 
       // Agrupar entrenamientos por fecha
       const workoutsByDate = new Map<string, Workout[]>();
@@ -535,9 +505,6 @@ function MainApp() {
         }
       });
 
-      console.log(`🗑️ Entrenamientos a eliminar: ${workoutsToDelete.length}`);
-      console.log(`✅ Entrenamientos a mantener: ${workoutsToKeep.length}`);
-
       // Eliminar los duplicados
       for (const id of workoutsToDelete) {
         await api.deleteWorkout(id);
@@ -546,12 +513,9 @@ function MainApp() {
       // Actualizar el estado
       setWorkouts(workoutsToKeep);
 
-      alert(`✅ Limpieza completada:\n- Eliminados: ${workoutsToDelete.length}\n- Mantenidos: ${workoutsToKeep.length}`);
-      console.log("✅ Limpieza de duplicados completada");
+      toast.success(`Limpieza completada: ${workoutsToDelete.length} eliminados, ${workoutsToKeep.length} mantenidos`);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Error desconocido";
-      alert(`Error al limpiar duplicados: ${errorMsg}`);
-      console.error("❌ Error al limpiar duplicados:", err);
+      toast.error(`Error al limpiar duplicados: ${err instanceof Error ? err.message : "Error desconocido"}`);
     }
   };
 
@@ -566,11 +530,8 @@ function MainApp() {
     try {
       const newChallenge = await api.addChallenge(challenge);
       setChallenges([...challenges, newChallenge]);
-      console.log("✅ Desafío agregado:", newChallenge);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Error desconocido";
-      alert(`Error al agregar desafío: ${errorMsg}`);
-      console.error("❌ Error al agregar desafío:", err);
+      toast.error(`Error al agregar desafío: ${err instanceof Error ? err.message : "Error desconocido"}`);
     }
   };
 
@@ -578,24 +539,17 @@ function MainApp() {
     try {
       const updated = await api.updateChallenge(id, challenge);
       setChallenges(challenges.map(c => c.id === id ? updated : c));
-      console.log("✅ Desafío actualizado:", updated);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Error desconocido";
-      alert(`Error al actualizar desafío: ${errorMsg}`);
-      console.error("❌ Error al actualizar desafío:", err);
+      toast.error(`Error al actualizar desafío: ${err instanceof Error ? err.message : "Error desconocido"}`);
     }
   };
 
   const handleDeleteChallenge = async (id: string) => {
     try {
-      console.log('🗑️ Frontend: Deleting challenge with ID:', id);
       await api.deleteChallenge(id);
       setChallenges(challenges.filter(c => c.id !== id));
-      console.log("✅ Desafío eliminado:", id);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Error desconocido";
-      alert(`Error al eliminar desafío: ${errorMsg}`);
-      console.error("❌ Error al eliminar desafío:", err);
+      toast.error(`Error al eliminar desafío: ${err instanceof Error ? err.message : "Error desconocido"}`);
     }
   };
 
@@ -605,11 +559,8 @@ function MainApp() {
     try {
       const newHoliday = await api.addHoliday(holiday);
       setHolidays([...holidays, newHoliday]);
-      console.log("✅ Día feriado agregado:", newHoliday);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Error desconocido";
-      alert(`Error al agregar día feriado: ${errorMsg}`);
-      console.error("❌ Error al agregar día feriado:", err);
+      toast.error(`Error al agregar día feriado: ${err instanceof Error ? err.message : "Error desconocido"}`);
     }
   };
 
@@ -617,11 +568,8 @@ function MainApp() {
     try {
       const updatedHoliday = await api.updateHoliday(id, holiday);
       setHolidays(holidays.map(h => h.id === id ? updatedHoliday : h));
-      console.log("✅ Día feriado actualizado:", updatedHoliday);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Error desconocido";
-      alert(`Error al actualizar día feriado: ${errorMsg}`);
-      console.error("❌ Error al actualizar día feriado:", err);
+      toast.error(`Error al actualizar día feriado: ${err instanceof Error ? err.message : "Error desconocido"}`);
     }
   };
 
@@ -629,11 +577,8 @@ function MainApp() {
     try {
       await api.deleteHoliday(id);
       setHolidays(holidays.filter(h => h.id !== id));
-      console.log("✅ Día feriado eliminado:", id);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Error desconocido";
-      alert(`Error al eliminar día feriado: ${errorMsg}`);
-      console.error("❌ Error al eliminar día feriado:", err);
+      toast.error(`Error al eliminar día feriado: ${err instanceof Error ? err.message : "Error desconocido"}`);
     }
   };
 
@@ -641,75 +586,35 @@ function MainApp() {
 
   const handleAddTestControl = async (testControl: TestControl) => {
     try {
-      console.log('✅ App: Test control added from child component:', testControl.id);
-      
-      // Solo actualizar el estado con el test control ya creado
       setTestControls(prev => [...prev, testControl]);
-      
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Error desconocido";
-      alert(`Error al agregar test control: ${errorMsg}`);
-      console.error("❌ Error al agregar test control:", err);
-      
-      // En caso de error, recargar para sincronizar
-      try {
-        const fresh = await api.fetchTestControls();
-        setTestControls(fresh);
-      } catch (reloadErr) {
-        console.error("❌ Error recargando después de fallo:", reloadErr);
-      }
+      toast.error(`Error al agregar test control: ${err instanceof Error ? err.message : "Error desconocido"}`);
+      try { setTestControls(await api.fetchTestControls()); } catch {}
     }
   };
 
   const handleEditTestControl = async (testControl: TestControl) => {
     try {
-      console.log('✅ App: Test control updated from child component:', testControl.id);
-      
-      // Solo actualizar el estado con el test control ya actualizado
       setTestControls(testControls.map(tc => tc.id === testControl.id ? testControl : tc));
-      
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Error desconocido";
-      alert(`Error al actualizar test control: ${errorMsg}`);
-      console.error("❌ Error al actualizar test control:", err);
-      
-      // En caso de error, recargar para sincronizar
-      try {
-        const fresh = await api.fetchTestControls();
-        setTestControls(fresh);
-      } catch (reloadErr) {
-        console.error('❌ Error recargando:', reloadErr);
-      }
+      toast.error(`Error al actualizar test control: ${err instanceof Error ? err.message : "Error desconocido"}`);
+      try { setTestControls(await api.fetchTestControls()); } catch {}
     }
   };
 
   const handleDeleteTestControl = async (id: string) => {
     try {
-      // Eliminar directamente del servidor
       await api.deleteTestControl(id);
-      
-      // Actualizar el estado local inmediatamente
       setTestControls(prev => prev.filter(tc => tc.id !== id));
-      
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : "Error desconocido";
-      
-      // Si hay un error 404, significa que ya fue eliminado - actualizar estado silenciosamente sin log
+      // 404 = ya eliminado, actualizar estado silenciosamente
       if (errorMsg.toLowerCase().includes('404') || errorMsg.toLowerCase().includes('not found')) {
         setTestControls(prev => prev.filter(tc => tc.id !== id));
-        return; // Salir sin mostrar alerta ni ningún mensaje
+        return;
       }
-      
-      // Para otros errores, mostrar log de error, alerta e intentar sincronizar
-      console.error('❌ Error al eliminar test control:', errorMsg);
-      alert(`❌ Error al eliminar test control: ${errorMsg}`);
-      
-      try {
-        const fresh = await api.fetchTestControls();
-        setTestControls(fresh);
-      } catch (reloadErr) {
-        console.error('❌ Error recargando:', reloadErr);
-      }
+      toast.error(`Error al eliminar test control: ${errorMsg}`);
+      try { setTestControls(await api.fetchTestControls()); } catch {}
     }
   };
 
@@ -717,11 +622,8 @@ function MainApp() {
     try {
       const newTestResult = await api.addTestResult(testResult);
       setTestResults([...testResults, newTestResult]);
-      console.log("✅ Resultado de test agregado:", newTestResult);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Error desconocido";
-      alert(`Error al agregar resultado de test: ${errorMsg}`);
-      console.error("❌ Error al agregar resultado de test:", err);
+      toast.error(`Error al agregar resultado de test: ${err instanceof Error ? err.message : "Error desconocido"}`);
     }
   };
 
@@ -729,11 +631,8 @@ function MainApp() {
     try {
       const updated = await api.updateTestResult(id, testResult);
       setTestResults(testResults.map(tr => tr.id === id ? updated : tr));
-      console.log("✅ Resultado de test actualizado:", updated);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Error desconocido";
-      alert(`Error al actualizar resultado de test: ${errorMsg}`);
-      console.error("❌ Error al actualizar resultado de test:", err);
+      toast.error(`Error al actualizar resultado de test: ${err instanceof Error ? err.message : "Error desconocido"}`);
     }
   };
 
@@ -741,162 +640,42 @@ function MainApp() {
     try {
       await api.deleteTestResult(id);
       setTestResults(testResults.filter(tr => tr.id !== id));
-      console.log("✅ Resultado de test eliminado:", id);
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : "Error desconocido";
-      alert(`Error al eliminar resultado de test: ${errorMsg}`);
-      console.error("❌ Error al eliminar resultado de test:", err);
+      toast.error(`Error al eliminar resultado de test: ${err instanceof Error ? err.message : "Error desconocido"}`);
     }
   };
 
   // Función de sincronización para test controls y results
   const handleSyncTestData = async () => {
-    try {
-      console.log("🔄 Sincronizando datos de test controls...");
-      const [freshTestControls, freshTestResults] = await Promise.all([
-        api.fetchTestControls(),
-        api.fetchTestResults()
-      ]);
-      setTestControls(freshTestControls);
-      setTestResults(freshTestResults);
-      console.log("✅ Datos sincronizados:", {
-        testControls: freshTestControls.length,
-        testResults: freshTestResults.length
-      });
-    } catch (err) {
-      console.error("❌ Error sincronizando datos:", err);
-      throw err;
-    }
+    const [freshTestControls, freshTestResults] = await Promise.all([
+      api.fetchTestControls(),
+      api.fetchTestResults()
+    ]);
+    setTestControls(freshTestControls);
+    setTestResults(freshTestResults);
   };
 
-  // Combinar entrenamientos y desafíos en una sola lista
-  const allSessions = [
-    // Filtrar entrenamientos de sábado (solo quedan Lunes, Miércoles, Viernes)
+  const allSessions = useMemo(() => [
     ...workouts
       .filter(w => w.day !== "Sábado")
-      .map((w, idx) => ({ 
-        ...w, 
+      .map((w, idx) => ({
+        ...w,
         type: 'workout' as const,
-        // Si week no existe, calcularlo basado en el índice (3 entrenamientos por semana)
         week: w.week || Math.floor(idx / 3) + 1
       })),
-    ...challenges.map((c, idx) => ({ 
+    ...challenges.map((c, idx) => ({
       ...c,
       type: 'challenge' as const,
-      // Si week no existe, calcularlo basado en el índice (1 desafío por semana)
       week: c.week || idx + 1
     }))
-  ];
+  ], [workouts, challenges]);
 
-  // Función para convertir texto de fecha a formato ISO
-  const parseDateToISO = (dateText: string, week: number): string => {
-    // Primero intentar parsear formatos tipo "03-Jul-2026" o "3-Jul-2026"
-    const isoFormatRegex = /(\d{1,2})-(\w+)-(\d{4})/;
-    const isoMatch = dateText.match(isoFormatRegex);
-    
-    if (isoMatch) {
-      const day = parseInt(isoMatch[1]);
-      const monthAbbr = isoMatch[2].toLowerCase();
-      const year = parseInt(isoMatch[3]);
-      
-      // Mapa de abreviaturas de meses en español e inglés
-      const monthAbbrMap: { [key: string]: number } = {
-        'ene': 0, 'jan': 0, 'enero': 0, 'january': 0,
-        'feb': 1, 'febrero': 1, 'february': 1,
-        'mar': 2, 'marzo': 2, 'march': 2,
-        'abr': 3, 'apr': 3, 'abril': 3, 'april': 3,
-        'may': 4, 'mayo': 4,
-        'jun': 5, 'junio': 5, 'june': 5,
-        'jul': 6, 'julio': 6, 'july': 6,
-        'ago': 7, 'aug': 7, 'agosto': 7, 'august': 7,
-        'sep': 8, 'septiembre': 8, 'september': 8,
-        'oct': 9, 'octubre': 9, 'october': 9,
-        'nov': 10, 'noviembre': 10, 'november': 10,
-        'dic': 11, 'dec': 11, 'diciembre': 11, 'december': 11
-      };
-      
-      const month = monthAbbrMap[monthAbbr];
-      
-      if (month !== undefined) {
-        const date = new Date(year, month, day);
-        return date.toISOString().split('T')[0];
-      }
-    }
-    
-    // Mapa de meses completos en español a números
-    const monthMap: { [key: string]: number } = {
-      'enero': 0,
-      'febrero': 1,
-      'marzo': 2,
-      'abril': 3,
-      'mayo': 4,
-      'junio': 5,
-      'julio': 6,
-      'agosto': 7,
-      'septiembre': 8,
-      'octubre': 9,
-      'noviembre': 10,
-      'diciembre': 11
-    };
-
-    // Extraer día y mes del texto (formato: "2 de marzo")
-    const regex = /(\d+)\s+de\s+(\w+)/i;
-    const match = dateText.match(regex);
-    
-    if (match) {
-      const day = parseInt(match[1]);
-      const monthName = match[2].toLowerCase();
-      const month = monthMap[monthName];
-      
-      if (month !== undefined) {
-        // Determinar el año correcto basándose en la semana
-        // La temporada va de marzo 2026 (semana 1) a enero 2027 (semana 44)
-        // Semanas 1-43: 2026, Semanas 44+: 2027
-        // También: si el mes es enero o febrero, debe ser 2027
-        let year = 2026;
-        if (month === 0 || month === 1) { // enero o febrero
-          year = 2027;
-        } else if (week >= 44) {
-          year = 2027;
-        }
-        
-        const date = new Date(year, month, day);
-        return date.toISOString().split('T')[0];
-      }
-    }
-    
-    // Fallback: usar cálculo basado en semana si no se puede parsear
-    const baseDate = new Date(2026, 2, 2); // 2 de marzo de 2026
-    let daysToAdd = (week - 1) * 7;
-    
-    // Agregar días según el día de la semana
-    if (dateText.includes("Miércoles") || dateText.includes("miércoles")) {
-      daysToAdd += 2;
-    } else if (dateText.includes("Viernes") || dateText.includes("viernes")) {
-      daysToAdd += 4;
-    } else if (dateText.includes("Sábado") || dateText.includes("sábado")) {
-      daysToAdd += 5;
-    }
-    
-    const resultDate = new Date(baseDate);
-    resultDate.setDate(resultDate.getDate() + daysToAdd);
-    
-    return resultDate.toISOString().split('T')[0];
-  };
-
-  // Generar fechas ISO para todas las sesiones
-  const allSessionsWithDates = allSessions.map((session, idx) => ({
-    ...session,
-    dateISO: parseDateToISO(session.date, session.week)
-  }));
-
-  // Debug: Verificar que tenemos sesiones
-  console.log("📅 Sesiones para calendario:", {
-    totalSessions: allSessionsWithDates.length,
-    workouts: workouts.length,
-    challenges: challenges.length,
-    sample: allSessionsWithDates.slice(0, 3)
-  });
+  const allSessionsWithDates = useMemo(() =>
+    allSessions.map(session => ({
+      ...session,
+      dateISO: parseDateToISO(session.date, session.week)
+    })),
+  [allSessions]);
 
   // Función para convertir registros de AttendanceManager a formato SwimmerCard
   const convertAttendanceRecords = (swimmerId: string) => {
@@ -905,61 +684,41 @@ function MainApp() {
     return [];
   };
 
-  // Función para filtrar nadadores
-  const getFilteredSwimmers = () => {
-    return swimmers.filter((swimmer) => {
-      // Filtro por género
-      if (filterGender !== "all" && swimmer.gender !== filterGender) {
-        return false;
-      }
-      
-      // Filtro por categoría
+  const filteredSwimmers = useMemo(() =>
+    swimmers.filter(swimmer => {
+      if (filterGender !== "all" && swimmer.gender !== filterGender) return false;
       if (filterCategory !== "all") {
         const age = calculateAge(swimmer.dateOfBirth);
         const category = calculateMasterCategory(age);
-        if (category !== filterCategory) {
-          return false;
-        }
+        if (category !== filterCategory) return false;
       }
-      
       return true;
-    });
-  };
+    }),
+  [swimmers, filterGender, filterCategory]);
 
-  // Obtener todas las categorías únicas de los nadadores
-  const getUniqueCategories = () => {
+  const uniqueCategories = useMemo(() => {
     const categories = new Set<string>();
-    swimmers.forEach((swimmer) => {
+    swimmers.forEach(swimmer => {
       const age = calculateAge(swimmer.dateOfBirth);
-      const category = calculateMasterCategory(age);
-      categories.add(category);
+      categories.add(calculateMasterCategory(age));
     });
     return Array.from(categories).sort();
-  };
+  }, [swimmers]);
 
-  const filteredSwimmers = getFilteredSwimmers();
-  const uniqueCategories = getUniqueCategories();
-
-  // Agrupar sesiones por semana
-  const groupSessionsByWeek = () => {
+  const sessionsByWeek = useMemo(() => {
     const grouped: { [week: number]: typeof allSessions } = {};
-    allSessions.forEach((session) => {
-      if (!grouped[session.week]) {
-        grouped[session.week] = [];
-      }
+    allSessions.forEach(session => {
+      if (!grouped[session.week]) grouped[session.week] = [];
       grouped[session.week].push(session);
     });
     return grouped;
-  };
+  }, [allSessions]);
 
-  const sessionsByWeek = groupSessionsByWeek();
-
-  // Calcular estadísticas
-  const totalDistance = workouts.reduce((sum, w) => sum + w.distance, 0);
-  const challengeDistance = challenges.reduce((sum, c) => sum + c.distance, 0);
+  const totalDistance = useMemo(() => workouts.reduce((sum, w) => sum + w.distance, 0), [workouts]);
+  const challengeDistance = useMemo(() => challenges.reduce((sum, c) => sum + c.distance, 0), [challenges]);
   const totalWorkouts = workouts.length;
   const totalChallenges = challenges.length;
-  const avgDistance = Math.round(totalDistance / totalWorkouts);
+  const avgDistance = totalWorkouts > 0 ? Math.round(totalDistance / totalWorkouts) : 0;
 
   const mesocicloStats = [
     {
@@ -970,7 +729,7 @@ function MainApp() {
       startDate: "2 marzo",
       endDate: "10 abril",
       icon: Target,
-      color: "text-blue-600",
+      color: "text-[#003366]",
       bgColor: "bg-blue-50",
       borderColor: "border-blue-200",
     },
@@ -982,7 +741,7 @@ function MainApp() {
       startDate: "13 abril",
       endDate: "29 mayo",
       icon: TrendingUp,
-      color: "text-red-600",
+      color: "text-[#E63946]",
       bgColor: "bg-red-50",
       borderColor: "border-red-200",
     },
@@ -994,9 +753,9 @@ function MainApp() {
       startDate: "1 junio",
       endDate: "10 julio",
       icon: Trophy,
-      color: "text-purple-600",
-      bgColor: "bg-purple-50",
-      borderColor: "border-purple-200",
+      color: "text-[#003366]",
+      bgColor: "bg-blue-50",
+      borderColor: "border-blue-200",
     },
     {
       name: "Reacumulación + técnica",
@@ -1006,9 +765,9 @@ function MainApp() {
       startDate: "13 julio",
       endDate: "14 agosto",
       icon: Activity,
-      color: "text-green-600",
-      bgColor: "bg-green-50",
-      borderColor: "border-green-200",
+      color: "text-[#003366]",
+      bgColor: "bg-slate-50",
+      borderColor: "border-slate-200",
     },
     {
       name: "Intensificación 2",
@@ -1018,7 +777,7 @@ function MainApp() {
       startDate: "17 agosto",
       endDate: "9 octubre",
       icon: TrendingUp,
-      color: "text-red-600",
+      color: "text-[#E63946]",
       bgColor: "bg-red-50",
       borderColor: "border-red-200",
     },
@@ -1030,9 +789,9 @@ function MainApp() {
       startDate: "12 octubre",
       endDate: "20 noviembre",
       icon: CalendarDays,
-      color: "text-yellow-600",
-      bgColor: "bg-yellow-50",
-      borderColor: "border-yellow-200",
+      color: "text-[#003366]",
+      bgColor: "bg-blue-50",
+      borderColor: "border-blue-200",
     },
     {
       name: "Taper final",
@@ -1042,47 +801,47 @@ function MainApp() {
       startDate: "23 noviembre",
       endDate: "2 enero 2027",
       icon: Trophy,
-      color: "text-blue-600",
-      bgColor: "bg-blue-50",
-      borderColor: "border-blue-200",
+      color: "text-[#E63946]",
+      bgColor: "bg-red-50",
+      borderColor: "border-red-200",
     },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-[#003366] text-white shadow-lg">
-        <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
-          <div className="flex items-center justify-between gap-4 sm:gap-6 mb-3 sm:mb-4">
-            <div className="flex items-center gap-2 sm:gap-6 flex-1 min-w-0">
+      <header className="bg-[#003366] text-white shadow-md">
+        <div className="container mx-auto px-3 sm:px-4 py-3 sm:py-5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 sm:gap-4 min-w-0">
               <div className="flex-shrink-0">
                 <LogoConfig />
               </div>
-              <div className="min-w-0 flex-1">
-                <h1 className="text-xl sm:text-4xl font-bold leading-tight truncate">Natación Master UCH</h1>
-                <p className="text-blue-200 text-xs sm:text-lg truncate">Universidad de Chile</p>
+              <div className="min-w-0">
+                <h1 className="text-lg sm:text-2xl font-bold leading-tight truncate">Natación Master UCH</h1>
+                <p className="text-white/50 text-xs truncate">Universidad de Chile</p>
               </div>
             </div>
             <div className="flex-shrink-0">
               <UserMenu />
             </div>
           </div>
-          <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 sm:gap-4 mt-4 sm:mt-6">
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg px-2 sm:px-4 py-1.5 sm:py-2 border border-white/20">
-              <p className="text-xs sm:text-sm text-blue-200">🗓️ Temporada 2026-2027</p>
-              <p className="font-semibold text-xs sm:text-base">Mar 2026 - Ene 2027</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
+            <div className="bg-white/10 rounded-lg px-3 py-1.5 border border-white/10">
+              <p className="text-white/50 text-[10px]">Temporada</p>
+              <p className="font-medium text-xs sm:text-sm">2026 – 2027</p>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg px-2 sm:px-4 py-1.5 sm:py-2 border border-white/20">
-              <p className="text-xs sm:text-sm text-blue-200">📊 Macrociclo</p>
-              <p className="font-semibold text-xs sm:text-base">44 semanas | 7 bloques</p>
+            <div className="bg-white/10 rounded-lg px-3 py-1.5 border border-white/10">
+              <p className="text-white/50 text-[10px]">Macrociclo</p>
+              <p className="font-medium text-xs sm:text-sm">44 sem · 7 bloques</p>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg px-2 sm:px-4 py-1.5 sm:py-2 border border-white/20">
-              <p className="text-xs sm:text-sm text-blue-200">Entrenamientos</p>
-              <p className="font-semibold text-xs sm:text-base">{totalWorkouts} sesiones</p>
+            <div className="bg-white/10 rounded-lg px-3 py-1.5 border border-white/10">
+              <p className="text-white/50 text-[10px]">Sesiones</p>
+              <p className="font-medium text-xs sm:text-sm">{totalWorkouts}</p>
             </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-lg px-2 sm:px-4 py-1.5 sm:py-2 border border-white/20">
-              <p className="text-xs sm:text-sm text-blue-200">Distancia Total</p>
-              <p className="font-semibold text-xs sm:text-base">{((totalDistance + challengeDistance) / 1000).toFixed(1)} km</p>
+            <div className="bg-white/10 rounded-lg px-3 py-1.5 border border-white/10">
+              <p className="text-white/50 text-[10px]">Distancia Total</p>
+              <p className="font-medium text-xs sm:text-sm">{((totalDistance + challengeDistance) / 1000).toFixed(1)} km</p>
             </div>
           </div>
         </div>
@@ -1406,16 +1165,10 @@ function MainApp() {
       </div>
 
       {/* Footer */}
-      <footer className="bg-[#003366] text-white mt-8 sm:mt-12 py-4 sm:py-6">
+      <footer className="bg-[#003366] text-white mt-8 py-4">
         <div className="container mx-auto px-3 sm:px-4 text-center">
-          <p className="text-sm sm:text-base text-blue-200">
-            Equipo de Natación Master - Universidad de Chile
-          </p>
-          <p className="text-xs sm:text-sm text-blue-300 mt-1 sm:mt-2">
-            Temporada 2026-2027 | Macrociclo 44 semanas | 7 bloques de periodización ondulante
-          </p>
-          <p className="text-xs sm:text-sm text-blue-300 mt-0.5 sm:mt-1">
-            Marzo 2026 - Enero 2027
+          <p className="text-xs text-white/50">
+            Natación Master UCH · Temporada 2026-2027 · 44 semanas
           </p>
         </div>
       </footer>
@@ -1441,8 +1194,6 @@ function MainApp() {
 }
 
 export default function App() {
-  console.log('🚀 App component rendering...');
-
   return (
     <QueryProvider>
       <AuthProvider>

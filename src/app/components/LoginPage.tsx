@@ -7,7 +7,6 @@ import { Label } from './ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Waves, Lock, Mail, User, Shield, AlertCircle, ImageIcon, Settings, Upload, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { debugListAllUsers } from '../services/auth';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import * as api from '../services/api';
 
@@ -91,65 +90,6 @@ export function LoginPage() {
     toast.success('Imagen eliminada');
   };
 
-  const handleDebugUsers = () => {
-    console.log('🐛 DEBUG - Verificando usuarios...');
-    debugListAllUsers();
-    toast.success('Verifica la consola del navegador (F12)');
-  };
-
-  const handleDiagnostics = async () => {
-    try {
-      setLoading(true);
-      console.clear();
-      console.log('🔍 EJECUTANDO DIAGNÓSTICO COMPLETO...\n');
-      
-      // Diagnóstico de usuarios
-      const usersRes = await fetch('https://rztiyofwhlwvofwhcgue.supabase.co/functions/v1/make-server-000a47d9/users', {
-        headers: {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6dGl5b2Z3aGx3dm9md2hjZ3VlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwMTk3ODUsImV4cCI6MjA4MjU5NTc4NX0.cuYH2GPWE4SocLIEHUaPIa8l2wNBifT9NdLKjyeaDsE'}
-      });
-      const users = await usersRes.json();
-      
-      console.log('👤 USUARIOS REGISTRADOS:', users.users?.length || 0);
-      users.users?.forEach((u: any) => {
-        console.log(`\n📧 ${u.email}`);
-        console.log(`   Nombre: ${u.name}`);
-        console.log(`   Rol: ${u.role}`);
-        console.log(`   🔑 Password: ${u.password}`);
-      });
-      
-      // Diagnóstico de solicitudes
-      const requestsRes = await fetch('https://rztiyofwhlwvofwhcgue.supabase.co/functions/v1/make-server-000a47d9/password-requests', {
-        headers: {'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6dGl5b2Z3aGx3dm9md2hjZ3VlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwMTk3ODUsImV4cCI6MjA4MjU5NTc4NX0.cuYH2GPWE4SocLIEHUaPIa8l2wNBifT9NdLKjyeaDsE'}
-      });
-      const requests = await requestsRes.json();
-      
-      console.log('\n\n📋 SOLICITUDES:', requests.requests?.length || 0);
-      requests.requests?.forEach((r: any) => {
-        console.log(`\n${r.status === 'approved' ? '✅' : r.status === 'pending' ? '⏳' : '❌'} ${r.name} (${r.email})`);
-        console.log(`   Estado: ${r.status}`);
-        if (r.generatedPassword) {
-          console.log(`   🔑 Password: ${r.generatedPassword}`);
-        }
-      });
-      
-      console.log('\n\n' + '='.repeat(60));
-      console.log('✅ DIAGNÓSTICO COMPLETADO');
-      console.log('='.repeat(60));
-      
-      toast.success('Diagnóstico completado - Revisa la consola (F12)');
-    } catch (error) {
-      console.error('❌ Error en diagnóstico:', error);
-      toast.error('Error en diagnóstico');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleQuickAdminLogin = () => {
-    setLoginEmail('admin@uch.cl');
-    setLoginPassword('admin123');
-    toast.success('Credenciales de admin cargadas');
-  };
 
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -219,54 +159,53 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-500 flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl">
+    <div className="min-h-screen bg-[#003366] flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8 relative">
-          {/* Botón de configuración de logo (esquina superior derecha) */}
           <button
             onClick={handleOpenLogoConfig}
-            className="absolute top-0 right-0 p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
+            className="absolute top-0 right-0 p-2 text-white/40 hover:text-white/80 transition-colors"
             title="Configurar logo"
           >
-            <Settings className="w-5 h-5" />
+            <Settings className="w-4 h-4" />
           </button>
 
-          <div className="flex justify-center mb-4">
-            <div className="bg-white rounded-lg p-4 shadow-2xl">
+          <div className="flex justify-center mb-5">
+            <div className="bg-white/10 rounded-xl p-4 border border-white/20">
               {logoUrl && !logoError ? (
                 <img
                   src={logoUrl}
                   alt="Logo Master UCH"
-                  className="w-20 h-20 object-contain"
+                  className="w-16 h-16 object-contain"
                   onError={() => setLogoError(true)}
                 />
               ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 150" className="w-20 h-20">
-                  <rect width="150" height="150" fill="#003366"/>
-                  <text x="75" y="70" textAnchor="middle" dominantBaseline="middle" fill="white" fontFamily="Arial, sans-serif" fontSize="20" fontWeight="bold">MASTER</text>
-                  <text x="75" y="95" textAnchor="middle" dominantBaseline="middle" fill="white" fontFamily="Arial, sans-serif" fontSize="16">UCH</text>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 150" className="w-16 h-16">
+                  <rect width="150" height="150" fill="transparent"/>
+                  <text x="75" y="65" textAnchor="middle" dominantBaseline="middle" fill="#E63946" fontFamily="Arial, sans-serif" fontSize="22" fontWeight="bold">MASTER</text>
+                  <text x="75" y="95" textAnchor="middle" dominantBaseline="middle" fill="white" fontFamily="Arial, sans-serif" fontSize="18" fontWeight="bold">UCH</text>
                 </svg>
               )}
             </div>
           </div>
-          <h1 className="text-4xl font-bold text-white mb-2">
+          <h1 className="text-3xl font-bold text-white mb-1">
             Natación Master UCH
           </h1>
-          <p className="text-blue-100 text-lg">
-            Universidad de Chile - Sistema de Gestión
+          <p className="text-white/60 text-sm">
+            Universidad de Chile
           </p>
-          <div className="flex items-center justify-center gap-2 mt-3">
-            <Waves className="w-5 h-5 text-blue-200" />
-            <span className="text-blue-200">Temporada 2026</span>
+          <div className="flex items-center justify-center gap-2 mt-2">
+            <Waves className="w-4 h-4 text-white/40" />
+            <span className="text-white/40 text-xs">Temporada 2026</span>
           </div>
         </div>
 
-        {/* Login/Signup Card - Full Width */}
-        <Card className="shadow-2xl max-w-2xl mx-auto">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Lock className="w-5 h-5" />
+        {/* Login/Signup Card */}
+        <Card className="shadow-2xl bg-white border-0">
+          <CardHeader className="pb-4">
+            <CardTitle className="flex items-center gap-2 text-[#003366]">
+              <Lock className="w-4 h-4" />
               Acceso al Sistema
             </CardTitle>
             <CardDescription>
@@ -441,9 +380,8 @@ export function LoginPage() {
         </Card>
 
         {/* Footer */}
-        <div className="text-center mt-8 text-blue-100 text-sm">
-          <p>© 2026 Universidad de Chile - Natación Master</p>
-          <p className="mt-1">Sistema de gestión de entrenamientos y nadadores</p>
+        <div className="text-center mt-6 text-white/30 text-xs">
+          <p>© 2026 Universidad de Chile</p>
         </div>
       </div>
 

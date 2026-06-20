@@ -1904,7 +1904,7 @@ app.post("/make-server-000a47d9/auth/reset-password", async (c: any) => {
       return c.json({ error: "Failed to find user", details: listError.message }, 500);
     }
 
-    const user = listData?.users?.find((u: any) => u.email === email);
+    const user = listData?.users?.find((u: any) => u.email?.toLowerCase() === email.toLowerCase().trim());
     if (!user) {
       return c.json({ error: "User not found" }, 404);
     }

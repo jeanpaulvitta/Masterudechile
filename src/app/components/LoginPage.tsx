@@ -5,7 +5,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Waves, Lock, Mail, User, Shield, AlertCircle, ImageIcon, Settings, Upload, X } from 'lucide-react';
+import { Waves, Lock, Mail, User, Shield, AlertCircle, ImageIcon, Settings, Upload, X, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './ui/dialog';
 import * as api from '../services/api';
@@ -19,6 +19,7 @@ export function LoginPage() {
   const [requestName, setRequestName] = useState('');
   const [requestEmail, setRequestEmail] = useState('');
   const [requestRole, setRequestRole] = useState<'swimmer' | 'coach'>('swimmer');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -182,9 +183,10 @@ export function LoginPage() {
                 />
               ) : (
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 150 150" className="w-16 h-16">
-                  <rect width="150" height="150" fill="transparent"/>
-                  <text x="75" y="65" textAnchor="middle" dominantBaseline="middle" fill="#E63946" fontFamily="Arial, sans-serif" fontSize="22" fontWeight="bold">MASTER</text>
-                  <text x="75" y="95" textAnchor="middle" dominantBaseline="middle" fill="white" fontFamily="Arial, sans-serif" fontSize="18" fontWeight="bold">UCH</text>
+                  <rect width="150" height="150" rx="12" fill="#003087"/>
+                  <text x="75" y="72" textAnchor="middle" dominantBaseline="middle" fill="#E63946" fontFamily="Arial Black, Impact, sans-serif" fontSize="72" fontWeight="900">U</text>
+                  <text x="75" y="108" textAnchor="middle" dominantBaseline="middle" fill="white" fontFamily="Arial, sans-serif" fontSize="12" fontWeight="bold" letterSpacing="2">NATACIÓN</text>
+                  <text x="75" y="126" textAnchor="middle" dominantBaseline="middle" fill="white" fontFamily="Arial, sans-serif" fontSize="12" fontWeight="bold" letterSpacing="3">MASTER</text>
                 </svg>
               )}
             </div>
@@ -245,13 +247,21 @@ export function LoginPage() {
                       <Lock className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                       <Input
                         id="login-password"
-                        type="password"
+                        type={showPassword ? "text" : "password"}
                         placeholder="••••••••"
                         value={loginPassword}
                         onChange={(e) => setLoginPassword(e.target.value)}
-                        className="pl-10"
+                        className="pl-10 pr-10"
                         required
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(v => !v)}
+                        className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 transition-colors"
+                        tabIndex={-1}
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
                     </div>
                   </div>
 

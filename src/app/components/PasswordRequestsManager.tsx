@@ -309,8 +309,7 @@ export function PasswordRequestsManager() {
 
   const handleCopyCredentials = () => {
     if (approvedCredentials) {
-      const message = `Usuario: ${approvedCredentials.email}
-Contraseña: ${approvedCredentials.password}`;
+      const message = `DISFRUTA TU APP MASTER U DE CHILE\nIngresa con tu\nUsuario: ${approvedCredentials.email}\nContraseña: ${approvedCredentials.password}`;
       
       copyToClipboard(message).then(() => {
         setCopied(true);
@@ -558,7 +557,7 @@ Contraseña: ${approvedCredentials.password}`;
                             size="sm"
                             variant="outline"
                             onClick={() => {
-                              const text = 'Usuario: ' + request.email + '\nContraseña: ' + request.generatedPassword;
+                              const text = 'DISFRUTA TU APP MASTER U DE CHILE\nIngresa con tu\nUsuario: ' + request.email + '\nContraseña: ' + request.generatedPassword;
                               
                               copyToClipboard(text).then(() => {
                                 toast.success('✅ Credenciales copiadas al portapapeles');

@@ -309,26 +309,8 @@ export function PasswordRequestsManager() {
 
   const handleCopyCredentials = () => {
     if (approvedCredentials) {
-      const message = `🏊‍♂️ NATACIÓN MASTER UCH - Credenciales de Acceso
-
-¡Hola! Tu solicitud de acceso ha sido aprobada.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📧 Email: ${approvedCredentials.email}
-🔑 Contraseña: ${approvedCredentials.password}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-📝 INSTRUCCIONES:
-1. Ingresa a la aplicación con estas credenciales
-2. Cambia tu contraseña desde tu perfil (recomendado)
-3. La contraseña es temporal y única
-
-⚠️ IMPORTANTE: 
-• Guarda estas credenciales en un lugar seguro
-• No compartas tu contraseña con nadie
-• Si olvidas tu contraseña, contacta al administrador
-
-¡Bienvenido al equipo de Natación Master UCH! 🏊‍♂️💪`;
+      const message = `Usuario: ${approvedCredentials.email}
+Contraseña: ${approvedCredentials.password}`;
       
       copyToClipboard(message).then(() => {
         setCopied(true);
@@ -576,15 +558,7 @@ export function PasswordRequestsManager() {
                             size="sm"
                             variant="outline"
                             onClick={() => {
-                              const nl = '\\n';
-                              const text = '📧 Credenciales de Acceso - Equipo Natación Master UCH' + nl + nl +
-                                '👤 Nombre: ' + request.name + nl +
-                                '📨 Email: ' + request.email + nl +
-                                '🔑 Contraseña: ' + request.generatedPassword + nl +
-                                '👔 Rol: ' + (request.role === 'coach' ? 'Entrenador' : 'Nadador') + nl + nl +
-                                '🔗 Acceso al Sistema:' + nl +
-                                'Ingresa con tu email y contraseña en el sistema.' + nl + nl +
-                                '⚠️ IMPORTANTE: Esta contraseña es temporal. Te recomendamos cambiarla desde tu perfil después de iniciar sesión.';
+                              const text = 'Usuario: ' + request.email + '\nContraseña: ' + request.generatedPassword;
                               
                               copyToClipboard(text).then(() => {
                                 toast.success('✅ Credenciales copiadas al portapapeles');

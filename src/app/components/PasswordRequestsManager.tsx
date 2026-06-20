@@ -85,9 +85,13 @@ export function PasswordRequestsManager() {
       
       if (!response.ok) {
         const errorData = await response.json();
-        
+
         // Si el usuario ya existe, mostrar mensaje apropiado
-        if (errorData.error?.includes('already') || response.status === 400) {
+        const isAlreadyExists = response.status === 409
+          || errorData.error?.toLowerCase().includes('already')
+          || errorData.details?.toLowerCase().includes('already');
+
+        if (isAlreadyExists) {
           toast.error('Este usuario ya tiene una cuenta en el sistema');
           await api.updatePasswordRequest(request.id, {
             status: 'approved',
@@ -96,7 +100,7 @@ export function PasswordRequestsManager() {
           await loadRequests();
           return;
         }
-        
+
         throw new Error(errorData.error || 'Error al crear usuario');
       }
       
@@ -178,6 +182,36 @@ export function PasswordRequestsManager() {
     } catch (error) {
       console.error('❌ Error al rechazar solicitud:', error);
       toast.error('Error al rechazar solicitud');
+    }
+  };
+
+  const handleResetPassword = async (request: PasswordRequest) => {
+    setLoading(true);
+    try {
+      const response = await fetch('https://rztiyofwhlwvofwhcgue.supabase.co/functions/v1/make-server-000a47d9/auth/reset-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6dGl5b2Z3aGx3dm9md2hjZ3VlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwMTk3ODUsImV4cCI6MjA4MjU5NTc4NX0.cuYH2GPWE4SocLIEHUaPIa8l2wNBifT9NdLKjyeaDsE'
+        },
+        body: JSON.stringify({ email: request.email })
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al resetear contraseña');
+      }
+
+      await api.updatePasswordRequest(request.id, { generatedPassword: data.password });
+      await loadRequests();
+
+      setApprovedCredentials({ email: request.email, password: data.password, name: request.name, role: request.role });
+      setShowApproveDialog(true);
+      toast.success('Contraseña reseteada exitosamente');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Error al resetear contraseña');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -528,6 +562,16 @@ export function PasswordRequestsManager() {
                       <TableCell>{new Date(request.requestDate).toLocaleDateString()}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleResetPassword(request)}
+                            disabled={loading}
+                            className="gap-1 text-orange-600 hover:bg-orange-50"
+                          >
+                            <Shield className="w-3 h-3" />
+                            Resetear Clave
+                          </Button>
                           <Button
                             size="sm"
                             variant="outline"

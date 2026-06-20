@@ -1,6 +1,7 @@
 import { projectId, publicAnonKey } from '../../../utils/supabase/info';
 import type { User } from '../contexts/AuthContext';
 import { supabase } from './supabase';
+import { fetchSwimmers } from './api';
 
 const API_URL = `https://${projectId}.supabase.co/functions/v1/make-server-000a47d9`;
 
@@ -85,19 +86,12 @@ export async function login(email: string, password: string): Promise<User> {
     if (role === 'swimmer') {
       try {
         console.log('🏊‍♂️ Buscando ficha de nadador...');
-        const swimmerResponse = await fetch(`${API_URL}/swimmers`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`
-          }
-        });
-        
-        if (swimmerResponse.ok) {
-          const data = await swimmerResponse.json();
-          const swimmers = data.swimmers || [];
-          
+        // fetchSwimmers usa caché de módulo (10 min TTL), evita re-fetch si App.tsx ya lo llamó
+        const swimmers = await fetchSwimmers();
+
+        if (swimmers) {
           // Buscar nadador por email
-          const swimmer = swimmers.find((s: any) => s.email === cleanEmail);
+          const swimmer = swimmers.find((s) => s.email?.toLowerCase() === cleanEmail.toLowerCase());
           
           if (swimmer) {
             finalSwimmerId = swimmer.id;

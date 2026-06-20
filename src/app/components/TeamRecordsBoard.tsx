@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Badge } from "./ui/badge";
@@ -36,58 +36,53 @@ export function TeamRecordsBoard({ swimmers }: TeamRecordsBoardProps) {
   const [selectedStyle, setSelectedStyle] = useState<typeof STYLES[number]>("Libre");
   const [selectedCategory, setSelectedCategory] = useState<string | "all">("all");
 
-  // Obtener todas las categorías disponibles
-  const getAvailableCategories = () => {
-    const categories = new Set<string>();
+  // Categorías por género (memoizadas para no recalcular en cada render)
+  const categoriesByGender = useMemo(() => {
+    const male = new Set<string>();
+    const female = new Set<string>();
     swimmers.forEach((swimmer) => {
-      if (swimmer.gender && swimmer.gender !== "Otro") {
-        const age = calculateAge(swimmer.dateOfBirth);
-        categories.add(calculateMasterCategory(age));
-      }
-    });
-    return Array.from(categories).sort();
-  };
-
-  const availableCategories = getAvailableCategories();
-
-  // Obtener todos los récords organizados
-  const getRecordsByStyleGenderCategory = (
-    style: typeof STYLES[number],
-    gender: "Masculino" | "Femenino",
-    distance: number
-  ) => {
-    const records: Map<string, RecordEntry> = new Map();
-
-    swimmers.forEach((swimmer) => {
-      // Verificar que el nadador tenga género definido
       if (!swimmer.gender || swimmer.gender === "Otro") return;
-      if (swimmer.gender !== gender) return;
+      const age = calculateAge(swimmer.dateOfBirth);
+      const cat = calculateMasterCategory(age);
+      if (swimmer.gender === "Masculino") male.add(cat);
+      else if (swimmer.gender === "Femenino") female.add(cat);
+    });
+    return {
+      Masculino: Array.from(male).sort(),
+      Femenino: Array.from(female).sort(),
+    };
+  }, [swimmers]);
 
+  const availableCategories = useMemo(() => {
+    return Array.from(
+      new Set([...categoriesByGender.Masculino, ...categoriesByGender.Femenino])
+    ).sort();
+  }, [categoriesByGender]);
+
+  // Récords del estilo seleccionado — se recomputa solo cuando cambia swimmers o selectedStyle
+  const recordsByGenderCategory = useMemo(() => {
+    const result = {
+      Masculino: new Map<string, RecordEntry>(),
+      Femenino: new Map<string, RecordEntry>(),
+    };
+    swimmers.forEach((swimmer) => {
+      if (!swimmer.gender || swimmer.gender === "Otro") return;
+      if (!swimmer.personalBests || !Array.isArray(swimmer.personalBests)) return;
+      const genderMap = result[swimmer.gender as "Masculino" | "Femenino"];
+      if (!genderMap) return;
       const age = calculateAge(swimmer.dateOfBirth);
       const category = calculateMasterCategory(age);
-
-      // Validar que personalBests sea un array
-      if (!swimmer.personalBests || !Array.isArray(swimmer.personalBests)) return;
-
       swimmer.personalBests.forEach((pb) => {
-        if (pb.style === style && pb.distance === distance) {
-          const key = `${category}-${distance}`;
-          const existing = records.get(key);
-
-          if (!existing || timeToSeconds(pb.time) < timeToSeconds(existing.record.time)) {
-            records.set(key, {
-              swimmer,
-              record: pb,
-              age,
-              category,
-            });
-          }
+        if (pb.style !== selectedStyle) return;
+        const key = `${category}-${pb.distance}`;
+        const existing = genderMap.get(key);
+        if (!existing || timeToSeconds(pb.time) < timeToSeconds(existing.record.time)) {
+          genderMap.set(key, { swimmer, record: pb, age, category });
         }
       });
     });
-
-    return records;
-  };
+    return result;
+  }, [swimmers, selectedStyle]);
 
   const getStyleColor = (style: string) => {
     switch (style) {
@@ -107,20 +102,11 @@ export function TeamRecordsBoard({ swimmers }: TeamRecordsBoardProps) {
   };
 
   const renderRecordsTable = (gender: "Masculino" | "Femenino") => {
-    // Obtener todas las categorías únicas
-    const categories = new Set<string>();
-    swimmers.forEach((swimmer) => {
-      if (swimmer.gender === gender) {
-        const age = calculateAge(swimmer.dateOfBirth);
-        categories.add(calculateMasterCategory(age));
-      }
-    });
+    const sortedCategories = categoriesByGender[gender];
 
-    const sortedCategories = Array.from(categories).sort();
-    
     // Filtrar por categoría seleccionada
-    const filteredCategories = selectedCategory === "all" 
-      ? sortedCategories 
+    const filteredCategories = selectedCategory === "all"
+      ? sortedCategories
       : sortedCategories.filter(cat => cat === selectedCategory);
 
     return (
@@ -139,12 +125,7 @@ export function TeamRecordsBoard({ swimmers }: TeamRecordsBoardProps) {
             <CardContent>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 {DISTANCES.map((distance) => {
-                  const records = getRecordsByStyleGenderCategory(
-                    selectedStyle,
-                    gender,
-                    distance
-                  );
-                  const record = records.get(`${category}-${distance}`);
+                  const record = recordsByGenderCategory[gender].get(`${category}-${distance}`);
 
                   if (!record) {
                     return (

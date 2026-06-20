@@ -97,12 +97,31 @@ export function IntegratedCalendar({
     const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
     const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
     const startDate = new Date(firstDayOfMonth);
-    
+
     // Ajustar para que la semana empiece en lunes (1) en lugar de domingo (0)
     // getDay() retorna: 0=Domingo, 1=Lunes, 2=Martes, ..., 6=Sábado
     const firstDayWeekday = startDate.getDay();
     const daysToSubtract = firstDayWeekday === 0 ? 6 : firstDayWeekday - 1; // Si es domingo, retroceder 6 días; si no, retroceder (día - 1)
     startDate.setDate(startDate.getDate() - daysToSubtract);
+
+    // Índices para búsquedas O(1) dentro del loop de 42 días
+    const sessionsByDate = new Map<string, Session[]>();
+    sessions.forEach(s => {
+      const list = sessionsByDate.get(s.date);
+      if (list) list.push(s);
+      else sessionsByDate.set(s.date, [s]);
+    });
+
+    const attendedSessionIds = new Set<string>();
+    if (currentUser) {
+      attendanceRecords.forEach(record => {
+        if (record.swimmerId === currentUser.id && record.status === "presente") {
+          attendedSessionIds.add(record.sessionId);
+        }
+      });
+    }
+
+    const holidayByDate = new Map(holidays.map(h => [h.date, h]));
 
     const days: CalendarDay[] = [];
     const currentDate = new Date(startDate);
@@ -117,13 +136,13 @@ export function IntegratedCalendar({
         currentDate.toDateString() === today.toDateString();
 
       // Buscar sesiones en este día y ordenarlas
-      const daySessions = sessions
-        .filter((s) => s.date === dateString)
+      const daySessions = (sessionsByDate.get(dateString) ?? [])
+        .slice()
         .sort((a, b) => {
           // Ordenar por tipo: workouts primero, luego challenges
           if (a.type === 'workout' && b.type === 'challenge') return -1;
           if (a.type === 'challenge' && b.type === 'workout') return 1;
-          
+
           // Si son del mismo tipo, ordenar por distancia (menor a mayor)
           return a.distance - b.distance;
         });
@@ -138,18 +157,11 @@ export function IntegratedCalendar({
 
       // Verificar asistencia del usuario actual
       const hasAttendance = currentUser
-        ? daySessions.some((session) =>
-            attendanceRecords.some(
-              (record) =>
-                record.swimmerId === currentUser.id &&
-                record.sessionId === session.id &&
-                record.status === "presente"
-            )
-          )
+        ? daySessions.some(session => attendedSessionIds.has(session.id))
         : undefined;
 
       // Buscar feriado en este día
-      const dayHoliday = holidays.find((h) => h.date === dateString);
+      const dayHoliday = holidayByDate.get(dateString);
 
       days.push({
         date: new Date(currentDate),

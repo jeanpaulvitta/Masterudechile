@@ -14,7 +14,11 @@ import { Badge } from './ui/badge';
 import { ChangePasswordDialog } from './ChangePasswordDialog';
 import { useState } from 'react';
 
-export function UserMenu() {
+interface UserMenuProps {
+  onOpenProfile?: () => void;
+}
+
+export function UserMenu({ onOpenProfile }: UserMenuProps) {
   const { user, logout } = useAuth();
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
@@ -77,6 +81,12 @@ export function UserMenu() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        {user.role === 'swimmer' && onOpenProfile && (
+          <DropdownMenuItem onClick={onOpenProfile} className="cursor-pointer">
+            <User className="w-4 h-4 mr-2" />
+            Mi Perfil
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem
           onClick={() => setChangePasswordOpen(true)}
           className="cursor-pointer"

@@ -823,7 +823,12 @@ function MainApp() {
               </div>
             </div>
             <div className="flex-shrink-0">
-              <UserMenu />
+              <UserMenu
+                onOpenProfile={currentSwimmer ? () => {
+                  setSelectedSwimmer(currentSwimmer);
+                  setSwimmerDialogOpen(true);
+                } : undefined}
+              />
             </div>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
@@ -1179,8 +1184,13 @@ function MainApp() {
         open={swimmerDialogOpen}
         onOpenChange={setSwimmerDialogOpen}
         attendanceRecords={selectedSwimmer ? convertAttendanceRecords(selectedSwimmer.id) : []}
-        onDelete={handleDeleteSwimmer}
-        onEdit={handleEditSwimmer}
+        onDelete={user?.role === 'admin' ? handleDeleteSwimmer : undefined}
+        onEdit={
+          user?.role === 'admin' || user?.role === 'coach' ||
+          (user?.role === 'swimmer' && selectedSwimmer?.id === currentSwimmer?.id)
+            ? handleEditSwimmer
+            : undefined
+        }
         onSavePersonalBests={handleSavePersonalBests}
         swimmerCompetitions={swimmerCompetitions}
         competitions={competitions}

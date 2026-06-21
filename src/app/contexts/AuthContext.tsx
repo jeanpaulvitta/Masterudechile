@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       if (!res.ok) return undefined;
       const data = await res.json();
-      return data.swimmers?.find((s: any) => s.email === authUser.email)?.id;
+      return data.swimmers?.find((s: any) => s.email?.toLowerCase() === authUser.email?.toLowerCase())?.id;
     } catch {
       return undefined;
     }

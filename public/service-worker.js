@@ -5,10 +5,9 @@ const RUNTIME_CACHE = 'master-uch-runtime-v1';
 // Archivos esenciales para cachear durante la instalación
 const ESSENTIAL_FILES = [
   '/',
-  '/index.html',
-  '/src/app/App.tsx',
-  '/src/styles/index.css',
-  '/manifest.json'
+  '/manifest.json',
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png'
 ];
 
 // URLs que NO deben cachearse (API calls)
